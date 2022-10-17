@@ -1,0 +1,15 @@
+img, video, svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    }
+
+main {
+    min-height: 100vh;
+    display: flex;
+    place-items: center;
+    flex-flow: column;
+    justify-content: center;
+    align-items: center;
+
+}
