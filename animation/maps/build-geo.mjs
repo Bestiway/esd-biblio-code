@@ -54,7 +54,19 @@ function mulberry32(a) {
   };
 }
 
-function buildMap(geom, { step, margin, seed, labelFrac = [0.5, 0.5] }) {
+/* regions: optional [{lon, lat, r}] (degrees) — when set, only dots whose
+   geographic position falls inside one of these circles are kept */
+function inRegions(lonlat, regions) {
+  if (!regions) return true;
+  const [lon, lat] = lonlat;
+  return regions.some(({ lon: rl, lat: rt, r }) => {
+    const dx = (lon - rl) * Math.cos(((lat + rt) / 2) * Math.PI / 180);
+    const dy = lat - rt;
+    return dx * dx + dy * dy < r * r;
+  });
+}
+
+function buildMap(geom, { step, margin, seed, labelFrac = [0.5, 0.5], regions = null }) {
   const projection = geoMercator().fitExtent(
     [[margin[0], margin[1]], [1920 - margin[0], 1080 - margin[1]]],
     { type: 'Feature', geometry: geom }
@@ -71,7 +83,7 @@ function buildMap(geom, { step, margin, seed, labelFrac = [0.5, 0.5] }) {
       const px = x + (rand() - 0.5) * step * 0.7;
       const py = y + (rand() - 0.5) * step * 0.7;
       const ll = projection.invert([px, py]);
-      if (ll && geoContains({ type: 'Feature', geometry: geom }, ll)) {
+      if (ll && inRegions(ll, regions) && geoContains({ type: 'Feature', geometry: geom }, ll)) {
         dots.push([Math.round(px * 10) / 10, Math.round(py * 10) / 10]);
       }
     }
@@ -97,10 +109,20 @@ const data = {
   spain: {
     ...buildMap(spain, { step: 30, margin: [330, 130], seed: 41, labelFrac: [0.46, 0.46] }),
     target: 90,
+    reveal: 0.9,
   },
   africa: {
-    ...buildMap(africa, { step: 25, margin: [560, 60], seed: 7, labelFrac: [0.40, 0.27] }),
+    /* 40% coverage: dots only in West Africa, around Egypt and South Africa */
+    ...buildMap(africa, {
+      step: 22, margin: [560, 60], seed: 7, labelFrac: [0.40, 0.27],
+      regions: [
+        { lon: -4, lat: 11, r: 10 },   // West Africa
+        { lon: 30, lat: 26.5, r: 6 },  // Egypt
+        { lon: 24, lat: -29, r: 7 },   // South Africa
+      ],
+    }),
     target: 40,
+    reveal: 1,
   },
 };
 

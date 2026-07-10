@@ -26,13 +26,12 @@
   #mapGroup { will-change: transform, opacity; }
 
   .outline {
-    fill: rgba(255,255,255,0.10);
+    fill: none;
     stroke: #fff;
     stroke-width: 6;
     stroke-linecap: round;
     stroke-linejoin: round;
     stroke-dasharray: 20 16;
-    filter: drop-shadow(0 4px 14px rgba(8,40,80,0.28));
   }
 
   .dot { fill: #12244F; }
@@ -106,7 +105,10 @@ const TOTAL = 8.8;
 const COUNT0 = 0.7, COUNT_DUR = 3.2;
 const OUT0 = 7.6;
 
-const shownAtEnd = Math.round(D.dots.length * TARGET / 100);
+/* reveal: fraction of the dot set shown at the end of the count.
+   Spain: uniform dots, 90% of them. Africa: dots are pre-clustered on the
+   covered regions, so the whole set appears while the counter reads 40%. */
+const shownAtEnd = Math.round(D.dots.length * (D.reveal ?? TARGET / 100));
 /* each dot's birth time, following the counter's easing */
 const birth = dotEls.map((_, i) => {
   if (i >= shownAtEnd) return Infinity;
