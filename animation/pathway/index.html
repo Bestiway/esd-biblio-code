@@ -101,8 +101,9 @@ const nodesG = document.getElementById('nodes');
 const nodeEls = nodes.map(n => {
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   const lx = n.x;
-  /* stacked block above the node: num / title / desc lines */
-  const descBottom = n.y - 58;                                   /* baseline of last desc line */
+  /* stacked block above the node: num / title / desc lines.
+     Kept above the next riser (n.y - RISER) so text never crosses the line */
+  const descBottom = n.y - RISER - 14;                           /* baseline of last desc line */
   const descY = j => descBottom - (n.desc.length - 1 - j) * 31;
   const titleY = descBottom - n.desc.length * 31 - 12;
   const numY = titleY - 44;
