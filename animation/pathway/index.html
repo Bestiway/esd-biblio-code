@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Valladolid's Pathway</title>
+<style>
+  @font-face {
+    font-family: 'Public Sans';
+    src: url('../assets/PublicSans-SemiBold.ttf') format('truetype');
+    font-weight: 600;
+  }
+  @font-face {
+    font-family: 'Public Sans';
+    src: url('../assets/PublicSans-Bold.ttf') format('truetype');
+    font-weight: 700;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 1920px; height: 1080px;
+    background: transparent;
+    overflow: hidden;
+    font-family: 'Public Sans', sans-serif;
+  }
+  svg { display: block; }
+  text { font-family: 'Public Sans', sans-serif; }
+
+  .title {
+    font-weight: 700; font-size: 74px; fill: #fff;
+    letter-spacing: 0.03em;
+    paint-order: stroke; stroke: rgba(0,9,56,0.5); stroke-width: 8px; stroke-linejoin: round;
+  }
+
+  .stairs {
+    fill: none; stroke: #03C5FF; stroke-width: 8;
+    stroke-linecap: round; stroke-linejoin: round;
+    filter: drop-shadow(0 0 16px rgba(3,197,255,0.55));
+  }
+
+  .tip-core { fill: #fff; }
+  .tip-halo { fill: rgba(3,197,255,0.35); }
+
+  .n-outer { fill: #000938; stroke: #03C5FF; stroke-width: 5; }
+  .n-inner { fill: #03C5FF; }
+
+  .s-num {
+    font-weight: 700; font-size: 27px; fill: #03C5FF;
+    letter-spacing: 0.12em;
+    paint-order: stroke; stroke: rgba(0,9,56,0.55); stroke-width: 5px; stroke-linejoin: round;
+  }
+  .s-title {
+    font-weight: 700; font-size: 36px; fill: #fff;
+    paint-order: stroke; stroke: rgba(0,9,56,0.55); stroke-width: 6px; stroke-linejoin: round;
+  }
+  .s-desc {
+    font-weight: 600; font-size: 23.5px; fill: rgba(255,255,255,0.75);
+    paint-order: stroke; stroke: rgba(0,9,56,0.5); stroke-width: 5px; stroke-linejoin: round;
+  }
+</style>
+</head>
+<body>
+<svg width="1920" height="1080" viewBox="0 0 1920 1080">
+  <g id="root">
+    <g id="titleG">
+      <circle cx="290" cy="150" r="52" fill="#fff" stroke="#03C5FF" stroke-width="4"/>
+      <image href="../shortlist/valladolid.svg" x="258" y="114" width="64" height="72"/>
+      <text class="title" x="380" y="175">Valladolid's Pathway</text>
+    </g>
+
+    <path id="stairs" class="stairs"/>
+    <circle id="tipHalo" class="tip-halo" r="24"/>
+    <circle id="tipCore" class="tip-core" r="9"/>
+    <g id="nodes"></g>
+  </g>
+</svg>
+
+<script>
+/* ---------------- Steps ---------------- */
+const STEPS = [
+  { title: 'Identify',   desc: ['spotted on Eyeball, video', 'and tournaments (the shortlist)'] },
+  { title: 'Sign',       desc: ['4–6 week trial → contract'] },
+  { title: 'U19',        desc: ['Juvenil A: adaptation', 'and first judgment'] },
+  { title: 'Promesas',   desc: ['the B team: real', 'competitive minutes'] },
+  { title: 'First team', desc: ['La Liga debut', 'and beyond'] },
+  { title: 'Resell',     desc: ['move up to a bigger club,', 'fee reinvested'] },
+];
+
+const X0 = 220, TREAD = 260, RISER = 118, YBASE = 900;
+
+/* staircase path + node centres */
+let d = `M${X0},${YBASE}`;
+const nodes = [];
+let x = X0, y = YBASE;
+STEPS.forEach((s, i) => {
+  nodes.push({ x: x + TREAD / 2, y, ...s, i });
+  x += TREAD; d += `H${x}`;
+  if (i < STEPS.length - 1) { y -= RISER; d += `V${y}`; }
+});
+document.getElementById('stairs').setAttribute('d', d);
+
+const nodesG = document.getElementById('nodes');
+const nodeEls = nodes.map(n => {
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  const lx = n.x;
+  /* stacked block above the node: num / title / desc lines */
+  const descBottom = n.y - 58;                                   /* baseline of last desc line */
+  const descY = j => descBottom - (n.desc.length - 1 - j) * 31;
+  const titleY = descBottom - n.desc.length * 31 - 12;
+  const numY = titleY - 44;
+  const descLines = n.desc.map((line, j) =>
+    `<text class="s-desc" text-anchor="middle" x="${lx}" y="${descY(j)}">${line}</text>`).join('');
+  g.innerHTML = `
+    <g class="pop">
+      <circle class="n-outer" cx="${n.x}" cy="${n.y}" r="17"/>
+      <circle class="n-inner" cx="${n.x}" cy="${n.y}" r="7"/>
+    </g>
+    <g class="lbl">
+      <text class="s-num" text-anchor="middle" x="${lx}" y="${numY}">0${n.i + 1}</text>
+      <text class="s-title" text-anchor="middle" x="${lx}" y="${titleY}">${n.title}</text>
+      ${descLines}
+    </g>`;
+  nodesG.appendChild(g);
+  return { g, pop: g.querySelector('.pop'), lbl: g.querySelector('.lbl'), ...n };
+});
+
+const stairsEl = document.getElementById('stairs');
+const LEN = stairsEl.getTotalLength();
+stairsEl.style.strokeDasharray = LEN;
+
+const tipCore = document.getElementById('tipCore');
+const tipHalo = document.getElementById('tipHalo');
+const titleG = document.getElementById('titleG');
+const root = document.getElementById('root');
+
+/* ---------------- Easings ---------------- */
+const clamp01 = v => Math.max(0, Math.min(1, v));
+const easeOutQuint = p => 1 - Math.pow(1 - p, 5);
+const easeOutCubic = p => 1 - Math.pow(1 - p, 3);
+const easeInOutCubic = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const easeInCubic = p => p * p * p;
+const easeOutBack = p => { const c = 1.70158, c3 = c + 1; return 1 + c3 * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
+const seg = (t, t0, dur, ease) => ease(clamp01((t - t0) / dur));
+
+/* ---------------- Timeline ----------------
+   0.0–1.0  title pops
+   0.9–5.3  staircase draws, steps pop as the tip passes
+   hold
+   9.0–10.0 out                        total 10.3s */
+const TOTAL = 10.3;
+const DRAW0 = 0.9, DRAW_DUR = 4.4;
+const OUT0 = 9.0;
+
+function seek(t) {
+  const gout = seg(t, OUT0, 0.9, easeInCubic);
+  root.setAttribute('opacity', (1 - gout).toFixed(3));
+  root.setAttribute('transform', `translate(0 ${gout * -46})`);
+
+  const tin = seg(t, 0.05, 0.9, easeOutQuint);
+  titleG.setAttribute('opacity', tin.toFixed(3));
+  titleG.setAttribute('transform', `translate(${(1 - tin) * -50} 0)`);
+
+  const dp = seg(t, DRAW0, DRAW_DUR, easeInOutCubic);
+  stairsEl.style.strokeDashoffset = LEN * (1 - dp);
+  const tipLen = LEN * dp;
+  const tip = stairsEl.getPointAtLength(tipLen);
+
+  const tipOn = dp > 0 && dp < 1 ? 1 : (dp >= 1 ? seg(t, DRAW0 + DRAW_DUR, 0.6, p => 1 - easeOutCubic(p)) : 0);
+  const pulse = 1 + 0.18 * Math.sin(t * 5.2);
+  tipCore.setAttribute('cx', tip.x); tipCore.setAttribute('cy', tip.y);
+  tipHalo.setAttribute('cx', tip.x); tipHalo.setAttribute('cy', tip.y);
+  tipCore.setAttribute('opacity', tipOn.toFixed(3));
+  tipHalo.setAttribute('opacity', (tipOn * 0.9).toFixed(3));
+  tipHalo.setAttribute('r', (24 * pulse).toFixed(1));
+
+  /* nodes pop as the tip passes their position along the path */
+  nodeEls.forEach(n => {
+    const nodeLen = TREAD / 2 + n.i * (TREAD + RISER);
+    const pPop = dp > 0 ? seg(tipLen, nodeLen, 110, easeOutBack) : 0;   /* over 110px of tip travel */
+    const pLbl = dp > 0 ? seg(tipLen, nodeLen + 25, 150, easeOutCubic) : 0;
+    n.pop.setAttribute('transform', `translate(${n.x} ${n.y}) scale(${Math.max(0, pPop)}) translate(${-n.x} ${-n.y})`);
+    n.pop.setAttribute('opacity', pPop > 0 ? 1 : 0);
+    n.lbl.setAttribute('opacity', pLbl.toFixed(3));
+    n.lbl.setAttribute('transform', `translate(0 ${(1 - pLbl) * 24})`);
+  });
+}
+
+window.seek = seek;
+window.TOTAL = TOTAL;
+window.seek(0);
+
+if (!navigator.webdriver) {
+  const start = performance.now();
+  (function loop() {
+    window.seek(((performance.now() - start) / 1000) % (TOTAL + 0.8));
+    requestAnimationFrame(loop);
+  })();
+}
+</script>
+</body>
+</html>
