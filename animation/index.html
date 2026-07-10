@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Africa Strategy — Tournament Reveal</title>
+<style>
+  @font-face {
+    font-family: 'Public Sans';
+    src: url('assets/PublicSans-SemiBold.ttf') format('truetype');
+    font-weight: 600;
+  }
+  @font-face {
+    font-family: 'Public Sans';
+    src: url('assets/PublicSans-Bold.ttf') format('truetype');
+    font-weight: 700;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    width: 1920px;
+    height: 1080px;
+    background: transparent;
+    overflow: hidden;
+    font-family: 'Public Sans', sans-serif;
+    font-weight: 600;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .stage {
+    width: 1920px;
+    height: 1080px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .panel { width: 1040px; }
+
+  /* ---------- Title ---------- */
+  .title-block { margin-bottom: 26px; }
+
+  .accent {
+    width: 92px;
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #F5A623, #E8590C);
+    margin-bottom: 26px;
+    transform-origin: left center;
+  }
+
+  .mask { overflow: hidden; }
+  .mask > .inner { display: inline-block; will-change: transform; }
+
+  h1 {
+    font-weight: 700;
+    font-size: 76px;
+    line-height: 1.08;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #fff;
+  }
+
+  /* ---------- Rows ---------- */
+  .rows { margin-top: 40px; }
+
+  .divider {
+    height: 2px;
+    background: rgba(255,255,255,0.22);
+    border-radius: 1px;
+    transform-origin: left center;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 34px;
+    padding: 30px 0;
+    will-change: transform, opacity;
+  }
+
+  .flag {
+    width: 108px;
+    height: 72px;
+    border-radius: 12px;
+    overflow: hidden;
+    flex-shrink: 0;
+    position: relative;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.35);
+    will-change: transform, opacity;
+  }
+  .flag svg { display: block; width: 100%; height: 100%; }
+  .flag::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.28);
+  }
+
+  .row .text { flex: 1; }
+
+  .t-name {
+    font-weight: 600;
+    font-size: 42px;
+    color: #fff;
+    line-height: 1.15;
+  }
+
+  .t-meta {
+    font-weight: 600;
+    font-size: 27px;
+    color: rgba(255,255,255,0.68);
+    letter-spacing: 0.02em;
+    margin-top: 6px;
+  }
+  .t-meta .country { color: #F5A623; }
+  .t-meta .dot { padding: 0 12px; color: rgba(255,255,255,0.4); }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="panel">
+
+    <div class="title-block">
+      <div class="accent" id="accent"></div>
+      <div class="mask"><div class="inner" id="titleInner"><h1>Africa Strategy</h1></div></div>
+    </div>
+
+    <div class="rows" id="rows"></div>
+
+  </div>
+</div>
+
+<script>
+/* ---------------- Flags (SVG) ---------------- */
+const FLAGS = {
+  mali: `<svg viewBox="0 0 3 2" preserveAspectRatio="none">
+    <rect width="1" height="2" fill="#14B53A"/>
+    <rect x="1" width="1" height="2" fill="#FCD116"/>
+    <rect x="2" width="1" height="2" fill="#CE1126"/>
+  </svg>`,
+  morocco: `<svg viewBox="0 0 3 2" preserveAspectRatio="none">
+    <rect width="3" height="2" fill="#C1272D"/>
+    <path d="M1.5,0.4 L1.8527,1.4854 L0.9294,0.8146 L2.0706,0.8146 L1.1473,1.4854 Z"
+          fill="none" stroke="#006233" stroke-width="0.085"/>
+  </svg>`,
+  senegal: `<svg viewBox="0 0 3 2" preserveAspectRatio="none">
+    <rect width="1" height="2" fill="#00853F"/>
+    <rect x="1" width="1" height="2" fill="#FDEF42"/>
+    <rect x="2" width="1" height="2" fill="#E31B23"/>
+    <polygon fill="#00853F" points="1.5,0.68 1.5718,0.9011 1.8043,0.9011 1.6162,1.0378 1.6881,1.2589 1.5,1.1222 1.3119,1.2589 1.3838,1.0378 1.1957,0.9011 1.4282,0.9011"/>
+  </svg>`,
+  ivorycoast: `<svg viewBox="0 0 3 2" preserveAspectRatio="none">
+    <rect width="1" height="2" fill="#F77F00"/>
+    <rect x="1" width="1" height="2" fill="#FFFFFF"/>
+    <rect x="2" width="1" height="2" fill="#009A44"/>
+  </svg>`
+};
+
+const DATA = [
+  { name: 'U19 Tournament', country: 'Mali',        date: 'May 2026',  flag: 'mali' },
+  { name: 'AFCON U17',      country: 'Morocco',     date: 'June 2026', flag: 'morocco' },
+  { name: 'U17 Tournament', country: 'Senegal',     date: 'July 2026', flag: 'senegal' },
+  { name: 'U18 Tournament', country: 'Ivory Coast', date: 'July 2026', flag: 'ivorycoast' }
+];
+
+/* ---------------- Build DOM ---------------- */
+const rowsEl = document.getElementById('rows');
+const rowEls = [], flagEls = [], nameInner = [], metaInner = [], dividerEls = [];
+
+DATA.forEach((d, i) => {
+  if (i > 0) {
+    const div = document.createElement('div');
+    div.className = 'divider';
+    rowsEl.appendChild(div);
+    dividerEls.push(div);
+  }
+  const row = document.createElement('div');
+  row.className = 'row';
+  row.innerHTML = `
+    <div class="flag">${FLAGS[d.flag]}</div>
+    <div class="text">
+      <div class="mask"><div class="inner name-inner"><div class="t-name">${d.name}</div></div></div>
+      <div class="mask"><div class="inner meta-inner"><div class="t-meta"><span class="country">${d.country}</span><span class="dot">•</span><span>${d.date}</span></div></div></div>
+    </div>`;
+  rowsEl.appendChild(row);
+  rowEls.push(row);
+  flagEls.push(row.querySelector('.flag'));
+  nameInner.push(row.querySelector('.name-inner'));
+  metaInner.push(row.querySelector('.meta-inner'));
+});
+
+const accentEl = document.getElementById('accent');
+const titleInner = document.getElementById('titleInner');
+
+/* ---------------- Easings ---------------- */
+const clamp01 = v => Math.max(0, Math.min(1, v));
+const easeOutQuint = p => 1 - Math.pow(1 - p, 5);
+const easeOutExpo  = p => p >= 1 ? 1 : 1 - Math.pow(2, -10 * p);
+const easeInCubic  = p => p * p * p;
+const easeOutBack  = p => { const c = 1.70158, c3 = c + 1; return 1 + c3 * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
+
+/* progress of a segment [t0, t0+dur] at time t, 0..1 */
+const seg = (t, t0, dur, ease) => ease(clamp01((t - t0) / dur));
+
+/* ---------------- Timeline (seconds) ----------------
+   Intro : 0.0 -> ~2.2
+   Hold  : ~2.2 -> 8.6
+   Outro : 8.6 -> ~10.4     total: 10.8s                */
+const TOTAL = 10.8;
+const OUT0 = 8.6;
+
+function seek(t) {
+  /* --- Accent bar --- */
+  {
+    const pin  = seg(t, 0.0, 0.9, easeOutExpo);
+    const pout = seg(t, OUT0, 0.55, easeInCubic);
+    accentEl.style.transform = `scaleX(${pin * (1 - pout)})`;
+    accentEl.style.opacity = 1 - pout;
+  }
+
+  /* --- Title (mask slide) --- */
+  {
+    const pin  = seg(t, 0.12, 1.0, easeOutQuint);
+    const pout = seg(t, OUT0 + 0.05, 0.6, easeInCubic);
+    const y = 115 * (1 - pin) - 115 * pout;
+    titleInner.style.transform = `translateY(${y}%)`;
+  }
+
+  /* --- Rows --- */
+  DATA.forEach((d, i) => {
+    const in0  = 0.85 + i * 0.32;
+    const out0 = OUT0 + 0.18 + i * 0.14;
+
+    /* row container: slide in from left, slide up on exit */
+    const rin  = seg(t, in0, 0.9, easeOutQuint);
+    const rout = seg(t, out0, 0.6, easeInCubic);
+    rowEls[i].style.transform = `translateX(${(1 - rin) * 60}px) translateY(${rout * -34}px)`;
+    rowEls[i].style.opacity = rin * (1 - rout);
+
+    /* flag: pop with overshoot */
+    const fin = seg(t, in0 + 0.1, 0.75, easeOutBack);
+    const fout = 1 - rout;
+    flagEls[i].style.transform = `scale(${0.55 + 0.45 * fin})`;
+    flagEls[i].style.opacity = Math.min(seg(t, in0 + 0.1, 0.3, p => p), fout);
+
+    /* text masks */
+    const nin = seg(t, in0 + 0.12, 0.85, easeOutQuint);
+    const min = seg(t, in0 + 0.24, 0.85, easeOutQuint);
+    const tout = seg(t, out0, 0.55, easeInCubic);
+    nameInner[i].style.transform = `translateY(${115 * (1 - nin) - 115 * tout}%)`;
+    metaInner[i].style.transform = `translateY(${115 * (1 - min) - 115 * tout}%)`;
+  });
+
+  /* --- Dividers --- */
+  dividerEls.forEach((el, i) => {
+    const pin  = seg(t, 1.05 + i * 0.32, 0.8, easeOutExpo);
+    const pout = seg(t, OUT0 + 0.2 + i * 0.14, 0.5, easeInCubic);
+    el.style.transform = `scaleX(${pin * (1 - pout)})`;
+    el.style.opacity = 1 - pout;
+  });
+}
+
+window.seek = seek;
+window.TOTAL = TOTAL;
+seek(0);
+
+/* Live preview when opened in a browser (ignored by the renderer, which calls seek() itself) */
+if (!navigator.webdriver) {
+  const start = performance.now();
+  (function loop() {
+    seek(((performance.now() - start) / 1000) % (TOTAL + 1));
+    requestAnimationFrame(loop);
+  })();
+}
+</script>
+</body>
+</html>
