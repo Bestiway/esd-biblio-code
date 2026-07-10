@@ -66,7 +66,9 @@ function inRegions(lonlat, regions) {
   });
 }
 
-function buildMap(geom, { step, margin, seed, labelFrac = [0.5, 0.5], regions = null }) {
+/* sparseP: chance of keeping a dot that falls outside the regions, for a
+   light scattering across the rest of the shape */
+function buildMap(geom, { step, margin, seed, labelFrac = [0.5, 0.5], regions = null, sparseP = 0 }) {
   const projection = geoMercator().fitExtent(
     [[margin[0], margin[1]], [1920 - margin[0], 1080 - margin[1]]],
     { type: 'Feature', geometry: geom }
@@ -83,7 +85,9 @@ function buildMap(geom, { step, margin, seed, labelFrac = [0.5, 0.5], regions = 
       const px = x + (rand() - 0.5) * step * 0.7;
       const py = y + (rand() - 0.5) * step * 0.7;
       const ll = projection.invert([px, py]);
-      if (ll && inRegions(ll, regions) && geoContains({ type: 'Feature', geometry: geom }, ll)) {
+      if (!ll) continue;
+      const keep = inRegions(ll, regions) || rand() < sparseP;
+      if (keep && geoContains({ type: 'Feature', geometry: geom }, ll)) {
         dots.push([Math.round(px * 10) / 10, Math.round(py * 10) / 10]);
       }
     }
@@ -112,15 +116,15 @@ const data = {
     reveal: 0.9,
   },
   africa: {
-    /* 40% coverage: dots only in West Africa, around Egypt and South Africa */
+    /* 40% coverage: dense on all of north-west Africa, light scatter elsewhere */
     ...buildMap(africa, {
       step: 22, margin: [560, 60], seed: 7, labelFrac: [0.40, 0.27],
       regions: [
-        { lon: -4, lat: 11, r: 10 },    // West Africa
-        { lon: 30, lat: 26.5, r: 6 },   // Egypt
-        { lon: -7, lat: 31.5, r: 5 },   // Morocco
-        { lon: 2.5, lat: 30.5, r: 6 },  // northern Algeria
+        { lon: 0, lat: 32, r: 11 },    // Maghreb (Morocco, Algeria, Tunisia)
+        { lon: -10, lat: 21, r: 8 },   // Western Sahara / Mauritania
+        { lon: -4, lat: 11, r: 10 },   // West Africa
       ],
+      sparseP: 0.10,
     }),
     target: 40,
     reveal: 1,
