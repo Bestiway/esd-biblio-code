@@ -1,3 +1,3 @@
 node_modules/
-out/frames/
-out/*.mov
+out/frames*/
+maps/out/frames*/
