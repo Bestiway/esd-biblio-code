@@ -116,9 +116,10 @@ const data = {
     ...buildMap(africa, {
       step: 22, margin: [560, 60], seed: 7, labelFrac: [0.40, 0.27],
       regions: [
-        { lon: -4, lat: 11, r: 10 },   // West Africa
-        { lon: 30, lat: 26.5, r: 6 },  // Egypt
-        { lon: 24, lat: -29, r: 7 },   // South Africa
+        { lon: -4, lat: 11, r: 10 },    // West Africa
+        { lon: 30, lat: 26.5, r: 6 },   // Egypt
+        { lon: -7, lat: 31.5, r: 5 },   // Morocco
+        { lon: 2.5, lat: 30.5, r: 6 },  // northern Algeria
       ],
     }),
     target: 40,
