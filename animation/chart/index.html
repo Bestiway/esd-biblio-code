@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Player Development — Market Value</title>
+<style>
+  @font-face {
+    font-family: 'Public Sans';
+    src: url('../assets/PublicSans-SemiBold.ttf') format('truetype');
+    font-weight: 600;
+  }
+  @font-face {
+    font-family: 'Public Sans';
+    src: url('../assets/PublicSans-Bold.ttf') format('truetype');
+    font-weight: 700;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 1920px; height: 1080px;
+    background: transparent;
+    overflow: hidden;
+    font-family: 'Public Sans', sans-serif;
+  }
+  svg { display: block; }
+  text { font-family: 'Public Sans', sans-serif; }
+
+  .kicker {
+    font-weight: 600;
+    font-size: 30px;
+    letter-spacing: 0.18em;
+    fill: #fff;
+  }
+  .big-value {
+    font-weight: 700;
+    font-size: 150px;
+    fill: #03C5FF;
+    filter: drop-shadow(0 0 26px rgba(3,197,255,0.45));
+  }
+
+  .axis { stroke: rgba(255,255,255,0.75); stroke-width: 4; stroke-linecap: round; }
+  .tick-label {
+    font-weight: 600; font-size: 30px;
+    fill: rgba(255,255,255,0.75);
+    text-anchor: middle;
+  }
+
+  .curve {
+    fill: none;
+    stroke: #03C5FF;
+    stroke-width: 9;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 18px rgba(3,197,255,0.55));
+  }
+  .area { fill: url(#areaGrad); }
+
+  .tip-core { fill: #fff; }
+  .tip-halo { fill: rgba(3,197,255,0.35); }
+
+  .stem {
+    stroke: #03C5FF; stroke-width: 3;
+    stroke-dasharray: 2 10;
+    stroke-linecap: round;
+  }
+  .m-dot-outer { fill: #000938; stroke: #03C5FF; stroke-width: 4; }
+  .m-dot-inner { fill: #03C5FF; }
+
+  .m-title {
+    font-weight: 700; font-size: 33px; fill: #fff;
+    paint-order: stroke; stroke: rgba(0,9,56,0.55); stroke-width: 6px; stroke-linejoin: round;
+  }
+  .m-date {
+    font-weight: 600; font-size: 25px; fill: rgba(255,255,255,0.72);
+    paint-order: stroke; stroke: rgba(0,9,56,0.5); stroke-width: 5px; stroke-linejoin: round;
+  }
+  .m-value {
+    font-weight: 700; font-size: 40px; fill: #03C5FF;
+    paint-order: stroke; stroke: rgba(0,9,56,0.55); stroke-width: 6px; stroke-linejoin: round;
+  }
+</style>
+</head>
+<body>
+<svg width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#03C5FF" stop-opacity="0.38"/>
+      <stop offset="100%" stop-color="#03C5FF" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="drawClip"><rect id="clipRect" x="0" y="0" width="0" height="1080"/></clipPath>
+  </defs>
+
+  <g id="root">
+    <!-- header -->
+    <g id="header">
+      <text class="kicker" x="260" y="150">MARKET VALUE</text>
+      <text class="big-value" id="bigValue" x="252" y="290">€0</text>
+    </g>
+
+    <!-- axis -->
+    <g id="axisG">
+      <line id="axisLine" class="axis" x1="260" y1="850" x2="1660" y2="850"/>
+      <g id="ticks"></g>
+    </g>
+
+    <!-- chart -->
+    <g clip-path="url(#drawClip)">
+      <path id="area" class="area"/>
+      <path id="curve" class="curve"/>
+    </g>
+    <circle id="tipHalo" class="tip-halo" r="26"/>
+    <circle id="tipCore" class="tip-core" r="10"/>
+
+    <g id="milestones"></g>
+  </g>
+</svg>
+
+<script>
+/* ---------------- Config ---------------- */
+const X0 = 260, X1 = 1660, YAXIS = 850, YTOP = 330;
+
+/* timeline t: 0 = Jul 2024, 1 = Jun 2026 */
+const MILESTONES = [
+  { t: 0.00, value: 25e3,  title: 'Cavigal Nice U17', date: 'Academy · 01/07/2024', anchor: 'start' },
+  { t: 0.50, value: 150e3, title: 'RB Leipzig U19',   date: 'Joined 01/07/2025',    anchor: 'middle' },
+  { t: 0.71, value: 500e3, title: 'RB Leipzig',        date: 'Pro debut 06/12/2025', anchor: 'middle' },
+];
+const FINAL_VALUE = 2.5e6;
+const VMAX = 2.65e6;
+const AGES = [ { t: 0, label: '16 y/o' }, { t: 0.5, label: '17 y/o' }, { t: 1, label: '18 y/o' } ];
+
+const xOf = t => X0 + (X1 - X0) * t;
+const yOf = v => YAXIS - (YAXIS - YTOP) * (v / VMAX);
+
+/* piecewise-exponential value curve through milestones + final value */
+const PTS = [...MILESTONES.map(m => [m.t, m.value]), [1, FINAL_VALUE]];
+function valueAt(t) {
+  if (t <= PTS[0][0]) return PTS[0][1];
+  for (let i = 0; i < PTS.length - 1; i++) {
+    const [t0, v0] = PTS[i], [t1, v1] = PTS[i + 1];
+    if (t <= t1) {
+      const s = (t - t0) / (t1 - t0);
+      const e = s * s * (3 - 2 * s); // smooth the exponent
+      return v0 * Math.pow(v1 / v0, e);
+    }
+  }
+  return PTS[PTS.length - 1][1];
+}
+
+/* ---------------- Build static SVG ---------------- */
+const SAMPLES = 260;
+let dCurve = '', dArea = '';
+for (let i = 0; i <= SAMPLES; i++) {
+  const t = i / SAMPLES;
+  const x = xOf(t).toFixed(1), y = yOf(valueAt(t)).toFixed(1);
+  dCurve += (i ? 'L' : 'M') + x + ',' + y;
+}
+dArea = dCurve + `L${X1},${YAXIS}L${X0},${YAXIS}Z`;
+document.getElementById('curve').setAttribute('d', dCurve);
+document.getElementById('area').setAttribute('d', dArea);
+
+const ticksG = document.getElementById('ticks');
+const tickEls = AGES.map(a => {
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.innerHTML = `
+    <line class="axis" stroke-width="3" x1="${xOf(a.t)}" y1="${YAXIS}" x2="${xOf(a.t)}" y2="${YAXIS + 16}"/>
+    <text class="tick-label" x="${xOf(a.t)}" y="${YAXIS + 58}">${a.label}</text>`;
+  ticksG.appendChild(g);
+  return g;
+});
+
+const msG = document.getElementById('milestones');
+const msEls = MILESTONES.map(m => {
+  const x = xOf(m.t), y = yOf(m.value);
+  const labelY = y - 150;
+  const tx = m.anchor === 'start' ? x : x; /* text x (anchor handles alignment) */
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.innerHTML = `
+    <line class="stem" x1="${x}" y1="${y - 18}" x2="${x}" y2="${labelY + 96}"/>
+    <g class="pop">
+      <circle class="m-dot-outer" cx="${x}" cy="${y}" r="15"/>
+      <circle class="m-dot-inner" cx="${x}" cy="${y}" r="6"/>
+    </g>
+    <g class="lbl" text-anchor="${m.anchor}">
+      <text class="m-value" x="${tx}" y="${labelY}">€0</text>
+      <text class="m-title" x="${tx}" y="${labelY + 44}">${m.title}</text>
+      <text class="m-date"  x="${tx}" y="${labelY + 80}">${m.date}</text>
+    </g>`;
+  msG.appendChild(g);
+  return {
+    g,
+    pop: g.querySelector('.pop'),
+    lbl: g.querySelector('.lbl'),
+    stem: g.querySelector('.stem'),
+    valEl: g.querySelector('.m-value'),
+    x, y, m,
+  };
+});
+
+const curveEl = document.getElementById('curve');
+const CURVE_LEN = curveEl.getTotalLength();
+
+const clipRect = document.getElementById('clipRect');
+const axisLine = document.getElementById('axisLine');
+const bigValue = document.getElementById('bigValue');
+const header = document.getElementById('header');
+const tipCore = document.getElementById('tipCore');
+const tipHalo = document.getElementById('tipHalo');
+const root = document.getElementById('root');
+
+/* ---------------- Helpers ---------------- */
+const clamp01 = v => Math.max(0, Math.min(1, v));
+const easeOutQuint = p => 1 - Math.pow(1 - p, 5);
+const easeOutCubic = p => 1 - Math.pow(1 - p, 3);
+const easeInOutCubic = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const easeInCubic = p => p * p * p;
+const easeOutBack = p => { const c = 1.70158, c3 = c + 1; return 1 + c3 * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
+const seg = (t, t0, dur, ease) => ease(clamp01((t - t0) / dur));
+
+function fmtEUR(v) {
+  if (v >= 1e6) {
+    const m = v / 1e6;
+    return '€' + (m >= 10 ? Math.round(m) : m.toFixed(2)) + 'M';
+  }
+  if (v >= 1e3) return '€' + Math.round(v / 1e3) + 'K';
+  return '€' + Math.round(v);
+}
+
+/* ---------------- Timeline ----------------
+   0.0–0.9  axis + header appear
+   0.9–4.9  curve draws, milestones pop as passed, counters climb
+   hold
+   8.4–9.4  fade out                     total 9.7s */
+const TOTAL = 9.7;
+const DRAW0 = 0.9, DRAW_DUR = 4.0;
+const OUT0 = 8.4;
+
+function seek(t) {
+  const gout = seg(t, OUT0, 0.9, easeInCubic);
+  root.setAttribute('opacity', (1 - gout).toFixed(3));
+  root.setAttribute('transform', `translate(0 ${gout * -46})`);
+
+  /* axis + ticks + header */
+  const ain = seg(t, 0.0, 0.9, easeOutQuint);
+  axisLine.setAttribute('x2', X0 + (X1 - X0) * ain);
+  tickEls.forEach((el, i) => {
+    const p = seg(t, 0.25 + i * 0.16, 0.6, easeOutCubic);
+    el.setAttribute('opacity', p.toFixed(3));
+    el.setAttribute('transform', `translate(0 ${(1 - p) * 22})`);
+  });
+  const hin = seg(t, 0.15, 0.8, easeOutQuint);
+  header.setAttribute('opacity', hin.toFixed(3));
+  header.setAttribute('transform', `translate(0 ${(1 - hin) * -30})`);
+
+  /* curve draw */
+  const dp = seg(t, DRAW0, DRAW_DUR, easeInOutCubic);
+  const tipLen = CURVE_LEN * dp;
+  const tip = curveEl.getPointAtLength(tipLen);
+  clipRect.setAttribute('width', Math.max(0, tip.x + 6));
+
+  const tipOn = dp > 0 && dp < 1 ? 1 : (dp >= 1 ? seg(t, DRAW0 + DRAW_DUR, 0.6, p => 1 - easeOutCubic(p)) : 0);
+  const pulse = 1 + 0.18 * Math.sin(t * 5.2);
+  tipCore.setAttribute('cx', tip.x); tipCore.setAttribute('cy', tip.y);
+  tipHalo.setAttribute('cx', tip.x); tipHalo.setAttribute('cy', tip.y);
+  tipCore.setAttribute('opacity', (dp > 0 ? Math.max(tipOn, 0) : 0).toFixed(3));
+  tipHalo.setAttribute('opacity', (dp > 0 ? Math.max(tipOn, 0) * 0.9 : 0).toFixed(3));
+  tipHalo.setAttribute('r', (26 * pulse).toFixed(1));
+
+  /* big counter follows the tip of the curve */
+  const tNow = clamp01((tip.x - X0) / (X1 - X0));
+  const vNow = dp <= 0 ? 0 : valueAt(tNow);
+  bigValue.textContent = fmtEUR(dp <= 0 ? 0 : vNow);
+
+  /* milestones */
+  msEls.forEach(({ pop, lbl, stem, valEl, x, y, m }) => {
+    const reached = tip.x >= x - 1 && dp > 0;
+    /* find when the tip reaches this milestone to time the pop */
+    const pPop = reached ? seg(tip.x, x, 90, easeOutBack) : 0;   /* pop over 90px of tip travel */
+    const pLbl = reached ? seg(tip.x, x, 150, easeOutCubic) : 0;
+    pop.setAttribute('transform', `translate(${x} ${y}) scale(${Math.max(0, pPop)}) translate(${-x} ${-y})`);
+    pop.setAttribute('opacity', pPop > 0 ? 1 : 0);
+    stem.setAttribute('opacity', (pLbl * 0.9).toFixed(3));
+    lbl.setAttribute('opacity', pLbl.toFixed(3));
+    lbl.setAttribute('transform', `translate(0 ${(1 - pLbl) * 26})`);
+    valEl.textContent = fmtEUR(m.value * pLbl);
+  });
+}
+
+window.seek = seek;
+window.TOTAL = TOTAL;
+seek(0);
+
+if (!navigator.webdriver) {
+  const start = performance.now();
+  (function loop() {
+    seek(((performance.now() - start) / 1000) % (TOTAL + 0.8));
+    requestAnimationFrame(loop);
+  })();
+}
+</script>
+</body>
+</html>
