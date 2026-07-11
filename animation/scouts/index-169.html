@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Scout Reports — Motion</title>
+<style>
+  @font-face {
+    font-family: 'Public Sans';
+    src: url('../assets/PublicSans-Regular.ttf') format('truetype');
+    font-weight: 400;
+  }
+  @font-face {
+    font-family: 'Public Sans';
+    src: url('../assets/PublicSans-SemiBold.ttf') format('truetype');
+    font-weight: 600;
+  }
+  @font-face {
+    font-family: 'Public Sans';
+    src: url('../assets/PublicSans-Bold.ttf') format('truetype');
+    font-weight: 700;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 1920px; height: 1080px;
+    background: transparent;
+    overflow: hidden;
+    font-family: 'Public Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  #stage { position: relative; width: 1920px; height: 1080px; }
+
+  /* ---------- Section kicker ---------- */
+  .kicker { position: absolute; left: 540px; top: 250px; }
+  .kicker .dash {
+    width: 84px; height: 8px; border-radius: 4px; background: #03C5FF;
+    box-shadow: 0 0 16px rgba(3,197,255,0.6); margin-bottom: 18px;
+    transform-origin: left center;
+  }
+  .kicker .txt {
+    font-weight: 700; font-size: 40px; letter-spacing: 0.14em; color: #fff;
+  }
+
+  /* ---------- Card ---------- */
+  .card-wrap {
+    position: absolute;
+    left: 0; top: 360px;
+    width: 1920px;
+    will-change: transform, opacity;
+  }
+  .avatar {
+    position: absolute; left: 400px; top: 26px;
+    width: 118px; height: 118px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 46px; color: #fff;
+    box-shadow: 0 8px 22px rgba(0,9,56,0.4);
+    border: 3px solid rgba(255,255,255,0.85);
+  }
+  .card {
+    position: absolute; left: 544px; top: 0;
+    width: 900px;
+    background: linear-gradient(160deg, rgba(92,99,110,0.86), rgba(70,77,88,0.86));
+    border-radius: 30px;
+    padding: 30px 36px 34px 36px;
+    box-shadow: 0 20px 50px rgba(0,9,56,0.4);
+    -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  }
+  .row1 { display: flex; justify-content: space-between; align-items: baseline; }
+  .name { font-weight: 700; font-size: 40px; color: #fff; }
+  .date { font-weight: 400; font-size: 30px; color: rgba(255,255,255,0.92); }
+  .game { margin-top: 16px; font-weight: 400; font-size: 30px; color: rgba(255,255,255,0.72); }
+  .game b { color: #fff; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
+  .grades { margin-top: 10px; font-weight: 400; font-size: 30px; color: rgba(255,255,255,0.72); }
+  .grades .g { color: #000938; font-weight: 700; }
+  .grades .sp { display: inline-block; width: 34px; }
+  .quote {
+    margin-top: 22px;
+    background: #fff;
+    border-radius: 22px;
+    padding: 26px 30px;
+    font-weight: 400; font-size: 38px; line-height: 1.34; color: #0A1633;
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="kicker" id="kicker">
+    <div class="dash" id="kdash"></div>
+    <div class="txt">WHAT SCOUTS SAY</div>
+  </div>
+  <div id="cards"></div>
+</div>
+
+<script>
+const SCOUTS = [
+  { name: 'Victor Delgado', date: '30/05/2026 13:54', game: 'Harbor City FC vs Northport Mariners',
+    perf: 8, pot: 9, av: 'VD', c1: '#0A3CFF', c2: '#03C5FF',
+    quote: "Going forward, he wins you games. It's the other side — he doesn't get back, doesn't hold his shape. I rate him a lot, I just don't see him in our system." },
+  { name: 'Naomi Fischer', date: '23/05/2026 09:07', game: 'Easton Blaze vs Harbor City FC',
+    perf: 7, pot: 8, av: 'NF', c1: '#1F7AEC', c2: '#00A884',
+    quote: "Genuinely gifted — beats his man for fun and delivers. My worry is tempo: he wants to slow it down and take a touch, and we're all about playing forward first time." },
+  { name: 'Marco Ellis', date: '12/05/2026 18:22', game: 'Harbor City FC vs Riverside United',
+    perf: 8, pot: 8, av: 'ME', c1: '#8E44AD', c2: '#03C5FF',
+    quote: "Elite feet, no question. But we press from the front and he switches off without the ball — I'd be fighting his instincts every week." },
+  { name: 'Sofia Marchetti', date: '05/05/2026 11:40', game: 'Lakeside Rovers vs Harbor City FC',
+    perf: 7, pot: 9, av: 'SM', c1: '#0A3CFF', c2: '#00C2C7',
+    quote: "Special talent, will play at a good level. For us though he drifts inside and we need width held — right player, wrong fit." },
+];
+
+const cardsEl = document.getElementById('cards');
+const cardEls = SCOUTS.map(s => {
+  const w = document.createElement('div');
+  w.className = 'card-wrap';
+  w.innerHTML = `
+    <div class="avatar" style="background:linear-gradient(150deg,${s.c1},${s.c2})">${s.av}</div>
+    <div class="card">
+      <div class="row1"><span class="name">${s.name}</span><span class="date">${s.date}</span></div>
+      <div class="game">Game: <b>${s.game}</b></div>
+      <div class="grades">Performance Grade: <span class="g">${s.perf}</span><span class="sp"></span>Potential Grade: <span class="g">${s.pot}</span></div>
+      <div class="quote">${s.quote}</div>
+    </div>`;
+  cardsEl.appendChild(w);
+  return w;
+});
+
+const kicker = document.getElementById('kicker');
+const kdash = document.getElementById('kdash');
+
+/* ---------------- Easings ---------------- */
+const clamp01 = v => Math.max(0, Math.min(1, v));
+const easeOutQuint = p => 1 - Math.pow(1 - p, 5);
+const easeOutCubic = p => 1 - Math.pow(1 - p, 3);
+const easeInCubic = p => p * p * p;
+const easeOutBack = p => { const c = 1.3, c3 = c + 1; return 1 + c3 * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
+const seg = (t, t0, dur, ease) => ease(clamp01((t - t0) / dur));
+
+/* ---------------- Timeline ----------------
+   kicker in 0.2-1.0
+   4 cards, one at a time: enter, hold, exit (stagger 2.5s)
+   total ~11.4s */
+const CARD_T = [1.0, 3.5, 6.0, 8.5];
+const HOLD = 2.2;          /* time from enter-start to exit-start */
+const TOTAL = 11.4;
+const OUT0 = 10.5;         /* kicker out */
+
+function seek(t) {
+  /* kicker */
+  const kin = seg(t, 0.2, 0.8, easeOutQuint);
+  const kout = seg(t, OUT0, 0.7, easeInCubic);
+  kdash.style.transform = `scaleX(${seg(t, 0.2, 0.7, easeOutCubic)})`;
+  kicker.style.opacity = (kin * (1 - kout)).toFixed(3);
+  kicker.style.transform = `translateY(${(1 - kin) * -24}px)`;
+
+  cardEls.forEach((el, i) => {
+    const t0 = CARD_T[i];
+    const pin = seg(t, t0, 0.6, easeOutBack);
+    const oin = seg(t, t0, 0.3, easeOutCubic);
+    const pout = seg(t, t0 + HOLD, 0.45, easeInCubic);
+    const alive = t >= t0 - 0.1 && pout < 1;
+    if (!alive) { el.style.opacity = '0'; return; }
+    const y = (1 - pin) * 70 - pout * 46;
+    el.style.transform = `translateY(${y}px) scale(${(0.96 + 0.04 * Math.min(pin,1))})`;
+    el.style.opacity = (oin * (1 - pout)).toFixed(3);
+  });
+}
+
+window.seek = seek;
+window.TOTAL = TOTAL;
+seek(0);
+
+if (!navigator.webdriver) {
+  const start = performance.now();
+  (function loop() {
+    seek(((performance.now() - start) / 1000) % (TOTAL + 0.6));
+    requestAnimationFrame(loop);
+  })();
+}
+</script>
+</body>
+</html>
