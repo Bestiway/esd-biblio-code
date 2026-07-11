@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Season Progression — Bar Chart</title>
+<style>
+  @font-face {
+    font-family: 'Public Sans';
+    src: url('../assets/PublicSans-SemiBold.ttf') format('truetype');
+    font-weight: 600;
+  }
+  @font-face {
+    font-family: 'Public Sans';
+    src: url('../assets/PublicSans-Bold.ttf') format('truetype');
+    font-weight: 700;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 1920px; height: 1080px;
+    background: transparent;
+    overflow: hidden;
+    font-family: 'Public Sans', sans-serif;
+  }
+  svg { display: block; }
+  text { font-family: 'Public Sans', sans-serif; }
+
+  .value {
+    font-weight: 700; font-size: 40px; fill: #fff;
+    text-anchor: middle;
+    paint-order: stroke; stroke: rgba(0,20,60,0.35); stroke-width: 5px; stroke-linejoin: round;
+  }
+  .month {
+    font-weight: 700; font-size: 33px; fill: #fff;
+    text-anchor: middle;
+    letter-spacing: 0.04em;
+    paint-order: stroke; stroke: rgba(0,20,60,0.35); stroke-width: 5px; stroke-linejoin: round;
+  }
+</style>
+</head>
+<body>
+<svg width="1920" height="1080" viewBox="0 0 1920 1080">
+  <defs>
+    <linearGradient id="gPink" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FF3A7A"/><stop offset="100%" stop-color="#D40F55"/>
+    </linearGradient>
+    <linearGradient id="gGreen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#59D75E"/><stop offset="100%" stop-color="#C6DE3A"/>
+    </linearGradient>
+    <linearGradient id="gBlue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2E7CFF"/><stop offset="100%" stop-color="#0A3CFF"/>
+    </linearGradient>
+  </defs>
+  <g id="root"></g>
+</svg>
+
+<script>
+/* ---------------- Data (edit values here) ---------------- */
+const DATA = [
+  { month: 'SEP', value: 3   , grad: 'gPink'  },
+  { month: 'OCT', value: 2.5 , grad: 'gPink'  },
+  { month: 'NOV', value: 6   , grad: 'gGreen' },
+  { month: 'DEC', value: 7   , grad: 'gGreen' },
+  { month: 'JAN', value: 8   , grad: 'gGreen' },
+  { month: 'FEB', value: 9   , grad: 'gBlue'  },
+  { month: 'MAR', value: 10  , grad: 'gBlue'  },
+  { month: 'APR', value: 11  , grad: 'gBlue'  },
+  { month: 'MAY', value: 12  , grad: 'gBlue'  },
+];
+const VMAX = 12;
+
+/* layout: generous safe margins so a zoom-in never crops the month row.
+   Baseline high enough that months sit right under the bars. */
+const X0 = 330, X1 = 1590;         /* chart width */
+const YBASE = 810;                  /* bars baseline */
+const YTOP = 270;                   /* tallest bar top */
+const BARW = 86;
+const MONTH_DY = 56;                /* months right below the baseline */
+
+const N = DATA.length;
+const slot = (X1 - X0) / N;
+
+const root = document.getElementById('root');
+const els = DATA.map((d, i) => {
+  const cx = X0 + slot * (i + 0.5);
+  const h = (YBASE - YTOP) * (d.value / VMAX);
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.innerHTML = `
+    <rect class="bar" x="${cx - BARW / 2}" y="${YBASE}" width="${BARW}" height="0"
+          rx="${BARW / 2}" fill="url(#${d.grad})"/>
+    <text class="value" x="${cx}" y="${YBASE - h - 24}" opacity="0">${String(d.value).replace('.', ',')}</text>
+    <text class="month" x="${cx}" y="${YBASE + MONTH_DY}" opacity="0">${d.month}</text>`;
+  root.appendChild(g);
+  return {
+    bar: g.querySelector('.bar'),
+    val: g.querySelector('.value'),
+    mon: g.querySelector('.month'),
+    cx, h, target: d.value,
+  };
+});
+
+/* ---------------- Easings ---------------- */
+const clamp01 = v => Math.max(0, Math.min(1, v));
+const easeOutQuint = p => 1 - Math.pow(1 - p, 5);
+const easeOutCubic = p => 1 - Math.pow(1 - p, 3);
+const easeInCubic = p => p * p * p;
+const seg = (t, t0, dur, ease) => ease(clamp01((t - t0) / dur));
+
+function fmt(v, target) {
+  /* count with one decimal only if the target has one */
+  const dec = target % 1 !== 0 ? 1 : 0;
+  return v.toFixed(dec).replace('.', ',');
+}
+
+/* ---------------- Timeline ----------------
+   months appear first (0.2+), bars grow staggered (0.45+),
+   numbers count with each bar. hold. out 8.2-9.1   total 9.4s */
+const TOTAL = 9.4;
+const OUT0 = 8.2;
+
+const rootG = document.getElementById('root');
+
+function seek(t) {
+  const gout = seg(t, OUT0, 0.9, easeInCubic);
+  rootG.setAttribute('opacity', (1 - gout).toFixed(3));
+  rootG.setAttribute('transform', `translate(0 ${gout * 40})`);
+
+  els.forEach((e, i) => {
+    const m0 = 0.2 + i * 0.10;
+    const b0 = 0.55 + i * 0.22;
+
+    /* month label: fades in early and STAYS under its bar */
+    const mp = seg(t, m0, 0.5, easeOutCubic);
+    e.mon.setAttribute('opacity', mp.toFixed(3));
+    e.mon.setAttribute('transform', `translate(0 ${(1 - mp) * 18})`);
+
+    /* bar grows */
+    const bp = seg(t, b0, 1.0, easeOutQuint);
+    const h = e.h * bp;
+    e.bar.setAttribute('height', Math.max(0, h).toFixed(1));
+    e.bar.setAttribute('y', (YBASE - h).toFixed(1));
+
+    /* value counts up, riding the top of the bar */
+    e.val.setAttribute('opacity', seg(t, b0 + 0.1, 0.4, easeOutCubic).toFixed(3));
+    e.val.setAttribute('y', (YBASE - h - 24).toFixed(1));
+    e.val.textContent = fmt(e.target * bp, e.target);
+  });
+}
+
+window.seek = seek;
+window.TOTAL = TOTAL;
+seek(0);
+
+if (!navigator.webdriver) {
+  const start = performance.now();
+  (function loop() {
+    seek(((performance.now() - start) / 1000) % (TOTAL + 0.8));
+    requestAnimationFrame(loop);
+  })();
+}
+</script>
+</body>
+</html>
