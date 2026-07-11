@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Players Carousel — Valladolid Africans</title>
+<style>
+  @font-face {
+    font-family: 'Public Sans';
+    src: url('../assets/PublicSans-SemiBold.ttf') format('truetype');
+    font-weight: 600;
+  }
+  @font-face {
+    font-family: 'Public Sans';
+    src: url('../assets/PublicSans-Bold.ttf') format('truetype');
+    font-weight: 700;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 1920px; height: 1080px;
+    background: transparent;
+    overflow: hidden;
+    font-family: 'Public Sans', sans-serif;
+  }
+
+  #stage { position: relative; width: 1920px; height: 1080px; }
+
+  /* ---------- Cards ---------- */
+  .card {
+    position: absolute;
+    left: 725px; top: 200px;
+    width: 470px; height: 680px;
+    border-radius: 28px;
+    overflow: hidden;
+    background: #000938;
+    box-shadow: 0 18px 60px rgba(0,9,56,0.55), 0 0 0 3px rgba(255,255,255,0.9);
+    will-change: transform, opacity;
+  }
+  .card img.photo {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  .card .shade {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 46%;
+    background: linear-gradient(180deg, rgba(0,9,56,0) 0%, rgba(0,9,56,0.88) 78%);
+  }
+  .card .info {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 0 30px 26px 30px;
+  }
+  .p-name { font-weight: 700; font-size: 40px; color: #fff; line-height: 1.1; }
+  .p-sub {
+    display: flex; align-items: center; gap: 12px;
+    margin-top: 10px;
+    font-weight: 600; font-size: 26px; color: rgba(255,255,255,0.85);
+  }
+  .p-sub svg { width: 38px; height: 27px; border-radius: 5px; box-shadow: 0 0 0 1px rgba(255,255,255,0.35); }
+  .p-club {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: #03C5FF;
+    color: #000938;
+    font-weight: 700; font-size: 22px;
+    letter-spacing: 0.02em;
+  }
+
+  /* ---------- Arrows ---------- */
+  .arrow {
+    position: absolute; top: 500px;
+    z-index: 5;
+    width: 84px; height: 84px;
+    border-radius: 50%;
+    background: rgba(0,9,56,0.6);
+    border: 3px solid rgba(255,255,255,0.85);
+    display: flex; align-items: center; justify-content: center;
+    will-change: transform, opacity, background, box-shadow;
+  }
+  .arrow svg { width: 34px; height: 34px; }
+  .arrow svg path {
+    fill: none; stroke: #fff; stroke-width: 9;
+    stroke-linecap: round; stroke-linejoin: round;
+  }
+  #arrowL { left: 540px; }
+  #arrowR { left: 1296px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="cards"></div>
+  <div class="arrow" id="arrowL"><svg viewBox="0 0 64 64"><path d="M38,16 L24,32 L38,48"/></svg></div>
+  <div class="arrow" id="arrowR"><svg viewBox="0 0 64 64"><path d="M26,16 L40,32 L26,48"/></svg></div>
+</div>
+
+<script>
+const FLAGS = {
+  senegal: `<svg viewBox="0 0 3 2" preserveAspectRatio="none"><rect width="1" height="2" fill="#00853F"/><rect x="1" width="1" height="2" fill="#FDEF42"/><rect x="2" width="1" height="2" fill="#E31B23"/><polygon fill="#00853F" points="1.5,0.68 1.5718,0.9011 1.8043,0.9011 1.6162,1.0378 1.6881,1.2589 1.5,1.1222 1.3119,1.2589 1.3838,1.0378 1.1957,0.9011 1.4282,0.9011"/></svg>`,
+  ghana: `<svg viewBox="0 0 3 2" preserveAspectRatio="none"><rect width="3" height="0.667" fill="#CE1126"/><rect y="0.667" width="3" height="0.667" fill="#FCD116"/><rect y="1.333" width="3" height="0.667" fill="#006B3F"/><polygon fill="#000" points="1.5,0.72 1.567,0.926 1.783,0.926 1.608,1.054 1.675,1.26 1.5,1.132 1.325,1.26 1.392,1.054 1.217,0.926 1.433,0.926"/></svg>`,
+  morocco: `<svg viewBox="0 0 3 2" preserveAspectRatio="none"><rect width="3" height="2" fill="#C1272D"/><path d="M1.5,0.4 L1.8527,1.4854 L0.9294,0.8146 L2.0706,0.8146 L1.1473,1.4854 Z" fill="none" stroke="#006233" stroke-width="0.085"/></svg>`
+};
+
+const PLAYERS = [
+  { img: 'img/sylla.jpg',  name: 'Mamadou Sylla',   flag: 'senegal', country: 'Senegal · Forward',    club: 'Real Valladolid' },
+  { img: 'img/salisu.png', name: 'Mohammed Salisu', flag: 'ghana',   country: 'Ghana · Defender',     club: 'Valladolid 2019–20' },
+  { img: 'img/anuar.jpg',  name: 'Anuar Tuhami',    flag: 'morocco', country: 'Morocco · Midfielder', club: 'Valladolid 2013–25' },
+];
+
+const cardsG = document.getElementById('cards');
+const cardEls = PLAYERS.map(p => {
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.innerHTML = `
+    <img class="photo" src="${p.img}">
+    <div class="shade"></div>
+    <div class="info">
+      <div class="p-name">${p.name}</div>
+      <div class="p-sub">${FLAGS[p.flag]}<span>${p.country}</span></div>
+      <div class="p-club">${p.club}</div>
+    </div>`;
+  cardsG.appendChild(el);
+  return el;
+});
+
+const arrowL = document.getElementById('arrowL');
+const arrowR = document.getElementById('arrowR');
+const arrowRPath = arrowR.querySelector('path');
+
+/* ---------------- Easings ---------------- */
+const clamp01 = v => Math.max(0, Math.min(1, v));
+const easeOutQuint = p => 1 - Math.pow(1 - p, 5);
+const easeOutCubic = p => 1 - Math.pow(1 - p, 3);
+const easeInOutCubic = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const easeInCubic = p => p * p * p;
+const seg = (t, t0, dur, ease) => ease(clamp01((t - t0) / dur));
+
+/* ---------------- Timeline ----------------
+   0.15  card 1 pops in, arrows fade in
+   2.55  arrow lights (from 2.10) -> slide to card 2
+   5.20  arrow lights (from 4.75) -> slide to card 3
+   hold 2s, out 7.95-8.85            total 9.1s  */
+const TOTAL = 9.1;
+const T = [2.55, 5.20];            /* transition starts */
+const TRANS = 0.65;
+const OUT0 = 7.95;
+const SLIDE = 640;
+
+function cardState(i, t) {
+  /* returns x offset + opacity for card i */
+  const enterT = i === 0 ? 0.15 : T[i - 1];
+  const exitT  = i < 2 ? T[i] : Infinity;
+  if (i === 0) {
+    const pin = seg(t, enterT, 0.6, easeOutQuint);
+    const pout = seg(t, exitT, TRANS, easeInOutCubic);
+    return { x: -SLIDE * pout, s: 0.92 + 0.08 * pin, o: pin * (1 - seg(t, exitT + 0.03, TRANS * 0.55, easeInCubic)) };
+  }
+  const pin = seg(t, enterT, TRANS, easeInOutCubic);
+  const pout = exitT === Infinity ? 0 : seg(t, exitT, TRANS, easeInOutCubic);
+  const oin = seg(t, enterT + 0.05, TRANS * 0.5, easeOutCubic);
+  return { x: SLIDE * (1 - pin) - SLIDE * pout, s: 1, o: oin * (1 - seg(t, exitT + 0.03, TRANS * 0.55, easeInCubic)) };
+}
+
+function seek(t) {
+  const gout = seg(t, OUT0, 0.9, easeInCubic);
+
+  cardEls.forEach((el, i) => {
+    const st = cardState(i, t);
+    el.style.transform = `translateX(${st.x}px) scale(${st.s})`;
+    el.style.opacity = (st.o * (1 - gout)).toFixed(3);
+  });
+
+  /* arrows */
+  const ain = seg(t, 0.3, 0.6, easeOutCubic);
+  [arrowL, arrowR].forEach(a => a.style.opacity = (ain * (1 - gout)).toFixed(3));
+
+  /* right arrow lights up cyan 0.45s before each transition */
+  let lit = 0;
+  T.forEach(tt => {
+    const on = seg(t, tt - 0.45, 0.28, easeOutCubic);
+    const off = seg(t, tt + 0.45, 0.4, easeOutCubic);
+    lit = Math.max(lit, on * (1 - off));
+  });
+  const glow = 24 + 14 * Math.sin(t * 9);
+  arrowR.style.background = lit > 0.01
+    ? `rgba(${3 * lit + (1 - lit) * 0}, ${Math.round(197 * lit + 9 * (1 - lit))}, ${Math.round(255 * lit + 56 * (1 - lit))}, ${0.6 + 0.4 * lit})`
+    : 'rgba(0,9,56,0.6)';
+  arrowR.style.boxShadow = lit > 0.01 ? `0 0 ${glow * lit}px rgba(3,197,255,${0.75 * lit})` : 'none';
+  arrowR.style.transform = `scale(${1 + 0.12 * lit})`;
+  arrowRPath.style.stroke = lit > 0.5 ? '#000938' : '#fff';
+}
+
+window.seek = seek;
+window.TOTAL = TOTAL;
+seek(0);
+
+if (!navigator.webdriver) {
+  const start = performance.now();
+  (function loop() {
+    seek(((performance.now() - start) / 1000) % (TOTAL + 0.8));
+    requestAnimationFrame(loop);
+  })();
+}
+</script>
+</body>
+</html>
