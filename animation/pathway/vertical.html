@@ -14,6 +14,11 @@
     src: url('../assets/PublicSans-Bold.ttf') format('truetype');
     font-weight: 700;
   }
+  @font-face {
+    font-family: 'Public Sans';
+    src: url('../assets/PublicSans-Regular.ttf') format('truetype');
+    font-weight: 400;
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body {
     width: 1080px; height: 1920px;
@@ -38,9 +43,9 @@
   .n-outer { fill: #000938; stroke: #03C5FF; stroke-width: 6; }
   .n-inner { fill: #03C5FF; }
 
-  .s-num   { font-weight: 700; font-size: 34px; fill: #03C5FF; letter-spacing: 0.14em; }
-  .s-title { font-weight: 700; font-size: 58px; fill: #fff; }
-  .s-desc  { font-weight: 600; font-size: 36px; fill: rgba(255,255,255,0.86); }
+  .s-num   { font-weight: 700; font-size: 40px; fill: #03C5FF; letter-spacing: 0.14em; }
+  .s-title { font-weight: 700; font-size: 74px; fill: #fff; }
+  .s-desc  { font-weight: 400; font-size: 46px; fill: rgba(255,255,255,0.88); }
 </style>
 </head>
 <body>
@@ -73,7 +78,7 @@ const STEPS = [
 ];
 
 const RAIL_X = 150;
-const Y_BOTTOM = 1740, Y_TOP = 470;
+const Y_BOTTOM = 1740, Y_TOP = 400;
 const N = STEPS.length;
 const STEP = (Y_BOTTOM - Y_TOP) / (N - 1);   /* vertical gap between nodes */
 
@@ -89,18 +94,18 @@ railArrow.setAttribute('points', `${RAIL_X - 26},${RAIL_TOP + 30} ${RAIL_X},${RA
 
 const nodesG = document.getElementById('nodes');
 const nodeEls = nodes.map(n => {
-  const tx = 250;                       /* text left, aligned for every step */
+  const tx = 264;                       /* text left, aligned for every step */
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   const descLines = n.desc.map((line, j) =>
-    `<text class="s-desc" x="${tx}" y="${n.y + 34 + j * 44}">${line}</text>`).join('');
+    `<text class="s-desc" x="${tx}" y="${n.y + 46 + j * 54}">${line}</text>`).join('');
   g.innerHTML = `
     <g class="pop">
-      <circle class="n-outer" cx="${n.x}" cy="${n.y}" r="19"/>
-      <circle class="n-inner" cx="${n.x}" cy="${n.y}" r="8"/>
+      <circle class="n-outer" cx="${n.x}" cy="${n.y}" r="22"/>
+      <circle class="n-inner" cx="${n.x}" cy="${n.y}" r="9"/>
     </g>
     <g class="lbl">
-      <text class="s-num" x="${tx}" y="${n.y - 62}">0${n.i + 1}</text>
-      <text class="s-title" x="${tx}" y="${n.y - 12}">${n.title}</text>
+      <text class="s-num" x="${tx}" y="${n.y - 74}">0${n.i + 1}</text>
+      <text class="s-title" x="${tx}" y="${n.y - 18}">${n.title}</text>
       ${descLines}
     </g>`;
   nodesG.appendChild(g);
