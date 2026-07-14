@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Animated Arrow — Top to Bottom (16:9)</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1080px; background: transparent; overflow: hidden; }
+  svg { display: block; }
+  .rail {
+    fill: none; stroke: #03C5FF; stroke-width: 12;
+    stroke-linecap: round; stroke-linejoin: round;
+    filter: drop-shadow(0 0 20px rgba(3,197,255,0.65));
+  }
+  .tip-core { fill: #fff; }
+  .tip-halo { fill: rgba(3,197,255,0.35); }
+</style>
+</head>
+<body>
+<svg width="1920" height="1080" viewBox="0 0 1920 1080">
+  <g id="root">
+    <path id="rail" class="rail"/>
+    <polyline id="arrow" class="rail" points=""/>
+    <circle id="tipHalo" class="tip-halo" r="30"/>
+    <circle id="tipCore" class="tip-core" r="12"/>
+  </g>
+</svg>
+
+<script>
+const X = 960;                 /* centred horizontally */
+const Y_TOP = 150, Y_BOTTOM = 900;
+const rail = document.getElementById('rail');
+rail.setAttribute('d', `M${X},${Y_TOP} L${X},${Y_BOTTOM}`);
+const arrow = document.getElementById('arrow');
+arrow.setAttribute('points', `${X - 34},${Y_BOTTOM - 42} ${X},${Y_BOTTOM} ${X + 34},${Y_BOTTOM - 42}`);
+
+const LEN = rail.getTotalLength();
+rail.style.strokeDasharray = LEN;
+
+const tipCore = document.getElementById('tipCore');
+const tipHalo = document.getElementById('tipHalo');
+const root = document.getElementById('root');
+
+const clamp01 = v => Math.max(0, Math.min(1, v));
+const easeOutCubic = p => 1 - Math.pow(1 - p, 3);
+const easeInOutCubic = p => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+const easeInCubic = p => p * p * p;
+const seg = (t, t0, dur, ease) => ease(clamp01((t - t0) / dur));
+
+/* draw top -> bottom, arrow pops at the end, hold, fade out */
+const TOTAL = 4.6;
+const DRAW0 = 0.3, DRAW_DUR = 2.1;
+const OUT0 = 3.9;
+
+function seek(t) {
+  const gout = seg(t, OUT0, 0.65, easeInCubic);
+  root.setAttribute('opacity', (1 - gout).toFixed(3));
+
+  const dp = seg(t, DRAW0, DRAW_DUR, easeInOutCubic);
+  rail.style.strokeDashoffset = LEN * (1 - dp);   /* reveals from the start (top) downward */
+  const tipLen = LEN * dp;
+  const tip = rail.getPointAtLength(tipLen);
+
+  const tipOn = dp > 0 && dp < 1 ? 1 : (dp >= 1 ? seg(t, DRAW0 + DRAW_DUR, 0.5, p => 1 - easeOutCubic(p)) : 0);
+  const pulse = 1 + 0.18 * Math.sin(t * 6);
+  tipCore.setAttribute('cx', tip.x); tipCore.setAttribute('cy', tip.y);
+  tipHalo.setAttribute('cx', tip.x); tipHalo.setAttribute('cy', tip.y);
+  tipCore.setAttribute('opacity', tipOn.toFixed(3));
+  tipHalo.setAttribute('opacity', (tipOn * 0.9).toFixed(3));
+  tipHalo.setAttribute('r', (30 * pulse).toFixed(1));
+
+  arrow.setAttribute('opacity', seg(dp, 0.92, 0.08, easeOutCubic).toFixed(3));
+}
+
+window.seek = seek;
+window.TOTAL = TOTAL;
+seek(0);
+
+if (!navigator.webdriver) {
+  const start = performance.now();
+  (function loop() { seek(((performance.now() - start) / 1000) % (TOTAL + 0.6)); requestAnimationFrame(loop); })();
+}
+</script>
+</body>
+</html>
