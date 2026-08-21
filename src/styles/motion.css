@@ -1,0 +1,550 @@
+/* ============================================================================
+   College Access — Motion System v1.0
+   Dépend de : tokens.css
+   Doc : MOTION.md
+
+   Principe : le mouvement sert la crédibilité, jamais le spectacle.
+   Une seule idée de mouvement par élément (opacité + UNE transformation).
+   Tout est annulable : voir le bloc `prefers-reduced-motion` en fin de fichier.
+   ========================================================================== */
+
+/* ============================================================================
+   1. KEYFRAMES
+   ========================================================================== */
+
+@keyframes ca-fade-in      { from { opacity: 0 } to { opacity: 1 } }
+
+@keyframes ca-fade-up      { from { opacity: 0; transform: translate3d(0, var(--ca-shift), 0) }
+                             to   { opacity: 1; transform: none } }
+
+@keyframes ca-fade-down    { from { opacity: 0; transform: translate3d(0, calc(-1 * var(--ca-shift)), 0) }
+                             to   { opacity: 1; transform: none } }
+
+@keyframes ca-fade-left    { from { opacity: 0; transform: translate3d(var(--ca-shift), 0, 0) }
+                             to   { opacity: 1; transform: none } }
+
+@keyframes ca-fade-right   { from { opacity: 0; transform: translate3d(calc(-1 * var(--ca-shift)), 0, 0) }
+                             to   { opacity: 1; transform: none } }
+
+/* Entrée "Apple" : le texte se met au point plutôt que d'arriver. */
+@keyframes ca-blur-in      { from { opacity: 0; filter: blur(var(--ca-blur-in)); transform: translate3d(0, var(--ca-shift-sm), 0) }
+                             to   { opacity: 1; filter: blur(0);                 transform: none } }
+
+@keyframes ca-scale-in     { from { opacity: 0; transform: scale(.94) }
+                             to   { opacity: 1; transform: none } }
+
+/* Révélation par masque : le mot semble sortir d'une ligne d'horizon. */
+@keyframes ca-mask-up      { from { opacity: 0; clip-path: inset(0 0 100% 0); transform: translate3d(0, .35em, 0) }
+                             to   { opacity: 1; clip-path: inset(-.25em -.25em -.25em -.25em); transform: none } }
+
+/* Signature College Access : l'overline s'ouvre jusqu'à son letter-spacing 18%. */
+@keyframes ca-track-in     { from { opacity: 0; letter-spacing: .04em }
+                             to   { opacity: 1; letter-spacing: .18em } }
+
+/* Filet d'accent rouge (2-3px max, cf. CLAUDE.md §6). */
+@keyframes ca-line-grow-x  { from { transform: scaleX(0) } to { transform: scaleX(1) } }
+@keyframes ca-line-grow-y  { from { transform: scaleY(0) } to { transform: scaleY(1) } }
+
+/* Carte glass : elle monte ET se condense (le flou arrive en dernier). */
+@keyframes ca-glass-rise   { from { opacity: 0; transform: translate3d(0, var(--ca-shift-lg), 0) scale(.98);
+                                    backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0) }
+                             to   { opacity: 1; transform: none;
+                                    backdrop-filter: blur(var(--ca-backdrop-blur));
+                                    -webkit-backdrop-filter: blur(var(--ca-backdrop-blur)) } }
+
+/* Balayage lumineux sur une surface glass — subtil, blanc 12% max. */
+@keyframes ca-shine        { from { transform: translateX(-120%) skewX(-18deg) }
+                             to   { transform: translateX(220%)  skewX(-18deg) } }
+
+/* Chiffre fantôme décoratif : opacity .04 (CLAUDE.md §6) + dérive lente. */
+@keyframes ca-ghost-in     { from { opacity: 0;   transform: translate3d(0, 24px, 0) }
+                             to   { opacity: .04; transform: none } }
+@keyframes ca-ghost-drift  { 0%,100% { transform: translate3d(0, 0, 0) }
+                             50%     { transform: translate3d(0, -14px, 0) } }
+
+/* Jauge : largeur pilotée par --ca-bar-value (0-100%). */
+@keyframes ca-bar-fill     { from { width: 0 } to { width: var(--ca-bar-value, 100%) } }
+
+/* Anneau SVG : stroke-dashoffset piloté par --ca-ring-offset. */
+@keyframes ca-ring-fill    { from { stroke-dashoffset: var(--ca-ring-length, 1000) }
+                             to   { stroke-dashoffset: var(--ca-ring-offset, 0) } }
+
+/* Tracé SVG (le "pont" performance -> université). */
+@keyframes ca-draw         { from { stroke-dashoffset: var(--ca-path-length, 1000) }
+                             to   { stroke-dashoffset: 0 } }
+
+/* Fond hero : dérive très lente du gradient radial, jamais perceptible d'un coup. */
+@keyframes ca-gradient-drift { 0%,100% { transform: translate3d(-2%, -1%, 0) scale(1.05) }
+                               50%     { transform: translate3d(2%, 2%, 0)  scale(1.12) } }
+
+/* Bandeau défilant (universités partenaires, disciplines). */
+@keyframes ca-marquee      { from { transform: translate3d(0, 0, 0) }
+                             to   { transform: translate3d(-50%, 0, 0) } }
+
+/* Halo d'appel sur CTA — rouge, une seule onde, jamais en boucle infinie sur écran plein. */
+@keyframes ca-pulse-ring   { 0%   { opacity: .55; transform: scale(1) }
+                             100% { opacity: 0;   transform: scale(1.35) } }
+
+/* Rideau navy de transition de page / de séquence social. */
+@keyframes ca-curtain-out  { from { transform: translate3d(0, 0, 0) }
+                             to   { transform: translate3d(0, -101%, 0) } }
+
+/* Loader : arc rouge. */
+@keyframes ca-spin         { to { transform: rotate(360deg) } }
+
+/* Curseur de frappe pour les headlines "typed". */
+@keyframes ca-caret        { 0%,49% { opacity: 1 } 50%,100% { opacity: 0 } }
+
+
+/* ============================================================================
+   2. SYSTÈME DE REVEAL AU SCROLL
+   Usage : <h2 data-ca-reveal="up">…</h2>
+   L'état initial est posé en CSS, `.is-inview` est ajouté par ca-motion.js.
+   ========================================================================== */
+
+[data-ca-reveal] {
+  opacity: 0;
+  will-change: opacity, transform, filter;
+}
+
+[data-ca-reveal].is-inview {
+  animation-duration: var(--ca-reveal-dur, var(--ca-dur-slow));
+  animation-timing-function: var(--ca-ease-out);
+  animation-fill-mode: both;
+  animation-delay: var(--ca-delay, 0ms);
+}
+
+[data-ca-reveal="fade"].is-inview   { animation-name: ca-fade-in }
+[data-ca-reveal="up"].is-inview     { animation-name: ca-fade-up }
+[data-ca-reveal="down"].is-inview   { animation-name: ca-fade-down }
+[data-ca-reveal="left"].is-inview   { animation-name: ca-fade-left }
+[data-ca-reveal="right"].is-inview  { animation-name: ca-fade-right }
+[data-ca-reveal="blur"].is-inview   { animation-name: ca-blur-in;  --ca-reveal-dur: var(--ca-dur-slower) }
+[data-ca-reveal="scale"].is-inview  { animation-name: ca-scale-in }
+[data-ca-reveal="mask"].is-inview   { animation-name: ca-mask-up;  --ca-reveal-dur: var(--ca-dur-slower) }
+[data-ca-reveal="track"].is-inview  { animation-name: ca-track-in; --ca-reveal-dur: var(--ca-dur-slower) }
+[data-ca-reveal="glass"].is-inview  { animation-name: ca-glass-rise; --ca-reveal-dur: var(--ca-dur-slower) }
+[data-ca-reveal="ghost"].is-inview  { animation-name: ca-ghost-in; --ca-reveal-dur: var(--ca-dur-cine) }
+
+/* Le mouvement se coupe une fois joué : plus de will-change qui traîne. */
+[data-ca-reveal].is-done { will-change: auto }
+
+/* Stagger : ca-motion.js écrit --ca-delay sur chaque enfant direct. */
+[data-ca-stagger] > * { --ca-delay: calc(var(--ca-index, 0) * var(--ca-stagger)) }
+
+
+/* ============================================================================
+   3. TEXTE DÉCOUPÉ (chars / words / lines)
+   Usage : <h1 data-ca-split="chars" data-ca-reveal="blur">…</h1>
+   ========================================================================== */
+
+.ca-split-line { display: block; overflow: hidden }
+.ca-split-word { display: inline-block; white-space: pre }
+.ca-split-char { display: inline-block; will-change: opacity, transform, filter }
+
+[data-ca-split] .ca-split-char,
+[data-ca-split] .ca-split-word { opacity: 0 }
+
+[data-ca-split].is-inview .ca-split-char,
+[data-ca-split].is-inview .ca-split-word {
+  animation: var(--ca-split-anim, ca-blur-in) var(--ca-dur-slower) var(--ca-ease-out) both;
+  animation-delay: calc(var(--ca-delay, 0ms) + var(--ca-index, 0) * var(--ca-split-stagger, 28ms));
+}
+
+[data-ca-split-anim="mask"]  { --ca-split-anim: ca-mask-up }
+[data-ca-split-anim="up"]    { --ca-split-anim: ca-fade-up }
+[data-ca-split-anim="fade"]  { --ca-split-anim: ca-fade-in }
+
+
+/* ============================================================================
+   4. RECETTE HERO SIGNATURE
+   [Overline SemiBold letter-spacing 18% RED] + [Titre Thin 96px WHITE/NAVY]
+   ========================================================================== */
+
+.ca-hero-overline {
+  display: inline-block;
+  font-family: var(--ca-font-sans);
+  font-size: 18px;
+  font-weight: var(--ca-fw-semibold);
+  text-transform: uppercase;
+  color: var(--ca-red);
+  letter-spacing: .18em;
+}
+.ca-hero-overline.is-inview { animation: ca-track-in var(--ca-dur-slower) var(--ca-ease-out) both }
+
+.ca-hero-title {
+  font-family: var(--ca-font-sans);
+  font-size: clamp(40px, 8vw, 96px);
+  font-weight: var(--ca-fw-thin);
+  letter-spacing: -.02em;
+  line-height: 1;
+  margin: var(--ca-space-5) 0;
+}
+.ca-hero-title strong { font-weight: var(--ca-fw-extrabold) }
+
+/* Filet d'accent rouge sous un titre : 2px, origine gauche. */
+.ca-rule {
+  display: block;
+  height: 2px;
+  width: 96px;
+  background: var(--ca-red);
+  transform-origin: left center;
+  transform: scaleX(0);
+}
+.ca-rule.is-inview { animation: ca-line-grow-x var(--ca-dur-slower) var(--ca-ease-out) both;
+                     animation-delay: var(--ca-delay, 0ms) }
+
+.ca-rule-y {
+  width: 2px; height: 100%;
+  background: var(--ca-red);
+  transform-origin: top center;
+  transform: scaleY(0);
+}
+.ca-rule-y.is-inview { animation: ca-line-grow-y var(--ca-dur-slower) var(--ca-ease-out) both }
+
+
+/* ============================================================================
+   5. SURFACES GLASS — entrée, survol, balayage
+   Rappel charte : glass uniquement sur fond navy/ink ou photo.
+   ========================================================================== */
+
+.ca-glass-hover {
+  transition:
+    transform var(--ca-dur-base) var(--ca-ease-out),
+    border-color var(--ca-dur-base) var(--ca-ease-standard),
+    box-shadow var(--ca-dur-base) var(--ca-ease-out);
+}
+.ca-glass-hover:hover,
+.ca-glass-hover:focus-within {
+  transform: translate3d(0, -6px, 0);
+  border-color: rgba(255, 255, 255, .34);
+  box-shadow: 0 40px 90px rgba(0, 0, 0, .45);
+}
+
+/* Balayage : déclenché au survol, ou en boucle lente via .ca-shine--loop. */
+.ca-shine { position: relative; overflow: hidden; isolation: isolate }
+.ca-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 42%;
+  background: linear-gradient(100deg,
+              rgba(255,255,255,0) 0%,
+              rgba(255,255,255,.12) 50%,
+              rgba(255,255,255,0) 100%);
+  transform: translateX(-120%) skewX(-18deg);
+  pointer-events: none;
+  z-index: 1;
+}
+.ca-shine:hover::after      { animation: ca-shine 900ms var(--ca-ease-in-out) }
+.ca-shine--loop::after      { animation: ca-shine 4.5s var(--ca-ease-in-out) infinite }
+
+/* Parallaxe de pointeur (JS écrit --ca-tilt-x / --ca-tilt-y). */
+[data-ca-tilt] {
+  transform:
+    perspective(1200px)
+    rotateX(var(--ca-tilt-x, 0deg))
+    rotateY(var(--ca-tilt-y, 0deg))
+    translate3d(0, 0, 0);
+  transition: transform var(--ca-dur-base) var(--ca-ease-out);
+}
+
+
+/* ============================================================================
+   6. DATA — compteurs, jauges, anneaux, chiffres fantômes
+   La data-viz doit rester honnête : la valeur finale est écrite dans le HTML.
+   ========================================================================== */
+
+.ca-count { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1 }
+
+.ca-bar {
+  position: relative;
+  height: 6px;
+  border-radius: var(--ca-radius-full);
+  background: rgba(255, 255, 255, .14);
+  overflow: hidden;
+}
+.ca-bar__fill {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: inherit;
+  background: var(--ca-red);
+}
+.ca-bar.is-inview .ca-bar__fill {
+  animation: ca-bar-fill var(--ca-dur-cine) var(--ca-ease-out) both;
+  animation-delay: var(--ca-delay, 0ms);
+}
+.ca-bar--light { background: rgba(0, 16, 87, .12) }
+.ca-bar--navy .ca-bar__fill { background: var(--ca-navy) }
+
+.ca-ring__track { stroke: rgba(255, 255, 255, .14) }
+.ca-ring__value { stroke: var(--ca-red); stroke-linecap: round;
+                  stroke-dasharray: var(--ca-ring-length, 1000);
+                  stroke-dashoffset: var(--ca-ring-length, 1000);
+                  transform: rotate(-90deg); transform-origin: 50% 50% }
+.ca-ring.is-inview .ca-ring__value {
+  animation: ca-ring-fill var(--ca-dur-cine) var(--ca-ease-out) both;
+  animation-delay: var(--ca-delay, 0ms);
+}
+
+.ca-ghost {
+  position: absolute;
+  font-family: var(--ca-font-sans);
+  font-weight: var(--ca-fw-black);
+  font-size: clamp(180px, 32vw, 460px);
+  line-height: .8;
+  letter-spacing: -.05em;
+  color: var(--ca-white);
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+}
+.ca-ghost.is-inview {
+  animation:
+    ca-ghost-in var(--ca-dur-cine) var(--ca-ease-out) both,
+    ca-ghost-drift 18s var(--ca-ease-in-out) 1.2s infinite;
+}
+.ca-ghost--ink { color: var(--ca-ink) }
+
+/* Tracé SVG : le "pont" entre performance sportive et université. */
+[data-ca-draw] {
+  stroke-dasharray: var(--ca-path-length, 1000);
+  stroke-dashoffset: var(--ca-path-length, 1000);
+}
+[data-ca-draw].is-inview {
+  animation: ca-draw var(--ca-dur-cine) var(--ca-ease-in-out) both;
+  animation-delay: var(--ca-delay, 0ms);
+}
+
+
+/* ============================================================================
+   7. MICRO-INTERACTIONS
+   ========================================================================== */
+
+.ca-btn-primary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ca-space-3);
+  min-height: 44px;                 /* touch target charte §9 */
+  transition:
+    background var(--ca-dur-fast) var(--ca-ease-standard),
+    transform var(--ca-dur-fast) var(--ca-ease-out);
+}
+.ca-btn-primary:hover  { transform: translate3d(0, -2px, 0) }
+.ca-btn-primary:active { transform: translate3d(0, 0, 0); transition-duration: var(--ca-dur-instant) }
+.ca-btn-primary .ca-btn__icon {
+  transition: transform var(--ca-dur-fast) var(--ca-ease-out);
+}
+.ca-btn-primary:hover .ca-btn__icon { transform: translate3d(4px, 0, 0) }
+
+/* Halo d'appel : une onde rouge, jouée à l'apparition uniquement. */
+.ca-btn-pulse { position: relative }
+.ca-btn-pulse::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  border: 2px solid var(--ca-red);
+  opacity: 0;
+  pointer-events: none;
+}
+.ca-btn-pulse.is-inview::before {
+  animation: ca-pulse-ring 1.6s var(--ca-ease-out) 3;
+  animation-delay: var(--ca-delay, 400ms);
+}
+
+/* Lien : soulignement rouge qui se déploie depuis la gauche. */
+.ca-link {
+  position: relative;
+  color: inherit;
+  text-decoration: none;
+  padding-bottom: 2px;
+}
+.ca-link::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 2px;
+  background: var(--ca-red);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--ca-dur-base) var(--ca-ease-out);
+}
+.ca-link:hover::after,
+.ca-link:focus-visible::after { transform: scaleX(1) }
+
+/* Focus visible obligatoire sur tout élément interactif (charte §9). */
+.ca-focus:focus-visible,
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--ca-red);
+  outline-offset: 3px;
+  border-radius: var(--ca-radius-sm);
+}
+
+/* Aimantation douce du CTA (JS écrit --ca-mag-x / --ca-mag-y). */
+[data-ca-magnetic] {
+  transform: translate3d(var(--ca-mag-x, 0px), var(--ca-mag-y, 0px), 0);
+  transition: transform var(--ca-dur-base) var(--ca-ease-out);
+}
+
+
+/* ============================================================================
+   8. FONDS & AMBIANCE
+   ========================================================================== */
+
+.ca-bg-hero {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, var(--ca-navy) 0%, var(--ca-navy-deep) 100%);
+  isolation: isolate;
+}
+.ca-bg-hero::before {
+  content: "";
+  position: absolute;
+  inset: -12%;
+  z-index: -1;
+  background:
+    radial-gradient(42% 42% at 22% 18%, rgba(210, 5, 58, .30) 0%, rgba(210, 5, 58, 0) 70%),
+    radial-gradient(52% 52% at 82% 78%, rgba(0, 16, 87, .85) 0%, rgba(10, 13, 23, 0) 72%);
+  animation: ca-gradient-drift 24s var(--ca-ease-in-out) infinite;
+  will-change: transform;
+}
+
+.ca-bg-ink { background: radial-gradient(ellipse at center, var(--ca-navy) 0%, var(--ca-ink) 100%) }
+
+/* Parallaxe au scroll (JS écrit --ca-parallax-y). */
+[data-ca-parallax] { transform: translate3d(0, var(--ca-parallax-y, 0px), 0); will-change: transform }
+
+
+/* ============================================================================
+   9. BANDEAU DÉFILANT
+   Le contenu doit être dupliqué 2x dans .ca-marquee__track.
+   ========================================================================== */
+
+.ca-marquee { overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+              mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent) }
+.ca-marquee__track {
+  display: flex;
+  width: max-content;
+  gap: var(--ca-space-8);
+  animation: ca-marquee var(--ca-marquee-dur, 32s) var(--ca-ease-linear) infinite;
+  will-change: transform;
+}
+.ca-marquee:hover .ca-marquee__track { animation-play-state: paused }
+.ca-marquee--reverse .ca-marquee__track { animation-direction: reverse }
+
+
+/* ============================================================================
+   10. LOGO, RIDEAU, LOADER
+   Logo : jamais d'effet ajouté (ombre, néon, rotation) — uniquement
+   opacité, masque et translation. Aucune déformation.
+   ========================================================================== */
+
+.ca-logo-reveal {
+  display: block;
+  clip-path: inset(0 100% 0 0);
+  opacity: 0;
+}
+.ca-logo-reveal.is-inview {
+  animation: ca-logo-wipe var(--ca-dur-cine) var(--ca-ease-out) both;
+  animation-delay: var(--ca-delay, 0ms);
+}
+@keyframes ca-logo-wipe {
+  from { opacity: 0; clip-path: inset(0 100% 0 0) }
+  25%  { opacity: 1 }
+  to   { opacity: 1; clip-path: inset(0 0 0 0) }
+}
+
+.ca-curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: var(--ca-navy-deep);
+  display: grid;
+  place-items: center;
+  animation: ca-curtain-out var(--ca-dur-slower) var(--ca-ease-in-out) 900ms both;
+}
+
+.ca-loader {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, .18);
+  border-top-color: var(--ca-red);
+  animation: ca-spin 800ms var(--ca-ease-linear) infinite;
+}
+
+.ca-caret::after {
+  content: "";
+  display: inline-block;
+  width: .06em;
+  height: .9em;
+  margin-left: .08em;
+  background: var(--ca-red);
+  vertical-align: -.08em;
+  animation: ca-caret 900ms steps(1) infinite;
+}
+
+
+/* ============================================================================
+   11. CLASSES DE LECTURE IMMÉDIATE (sans scroll, ex. formats social)
+   Usage : <div class="ca-anim ca-anim--blur" style="--ca-delay:600ms">
+   ========================================================================== */
+
+.ca-anim {
+  animation-duration: var(--ca-anim-dur, var(--ca-dur-slower));
+  animation-timing-function: var(--ca-ease-out);
+  animation-fill-mode: both;
+  animation-delay: var(--ca-delay, 0ms);
+}
+.ca-anim--fade  { animation-name: ca-fade-in }
+.ca-anim--up    { animation-name: ca-fade-up }
+.ca-anim--down  { animation-name: ca-fade-down }
+.ca-anim--left  { animation-name: ca-fade-left }
+.ca-anim--right { animation-name: ca-fade-right }
+.ca-anim--blur  { animation-name: ca-blur-in }
+.ca-anim--scale { animation-name: ca-scale-in }
+.ca-anim--mask  { animation-name: ca-mask-up }
+.ca-anim--track { animation-name: ca-track-in }
+.ca-anim--glass { animation-name: ca-glass-rise }
+.ca-anim--line  { animation-name: ca-line-grow-x }
+
+/* Boucle des séquences social (rejoue toutes les --ca-loop). */
+.ca-loop .ca-anim { animation-iteration-count: infinite; animation-duration: var(--ca-loop, 9s) }
+
+
+/* ============================================================================
+   12. ACCESSIBILITÉ — prefers-reduced-motion
+   On ne supprime pas l'information : on supprime le déplacement.
+   Les éléments restent dans leur état final, visibles.
+   ========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  [data-ca-reveal],
+  [data-ca-split] .ca-split-char,
+  [data-ca-split] .ca-split-word { opacity: 1 }
+
+  .ca-rule, .ca-rule-y { transform: none }
+  .ca-bar__fill        { width: var(--ca-bar-value, 100%) }
+  .ca-ghost            { opacity: .04 }
+  .ca-logo-reveal      { opacity: 1; clip-path: none }
+  .ca-ring__value      { stroke-dashoffset: var(--ca-ring-offset, 0) }
+  [data-ca-draw]       { stroke-dashoffset: 0 }
+  .ca-shine::after,
+  .ca-marquee__track,
+  .ca-bg-hero::before  { animation: none }
+  .ca-curtain          { display: none }
+}
