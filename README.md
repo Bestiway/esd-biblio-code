@@ -22,10 +22,38 @@ Le titre est mis à l'échelle par mesure de la ligne rendue : il reste dans la
 safe zone quel que soit le texte. Au-delà d'une ligne, la coupe diagonale laisse
 place à une entrée simple.
 
-**Export vidéo** — masquez l'interface (`H`), puis capturez l'écran ; ou passez
-le fond en vert pour une incrustation au montage. Le vert et le damier sont des
-outils de production, ils ne font pas partie de la charte et ne sont jamais
-diffusés.
+La page embarque Montserrat et le logo : elle fonctionne hors ligne.
+
+## Export vidéo — CapCut, Premiere, DaVinci
+
+Deux façons de sortir l'animation.
+
+**Fichier vidéo à couche alpha** (recommandé) — rendu image par image, sans
+capture d'écran :
+
+```bash
+npm i playwright
+node tools/render-frames.js --title "LA NCAA" --index "1/" --out ./build
+tools/export-video.sh ./build
+```
+
+| Sortie | Format | Usage |
+|---|---|---|
+| `*-alpha.mov` | ProRes 4444, couche alpha | CapCut iOS, Premiere, DaVinci, After Effects, Final Cut : la transparence est lue directement |
+| `*-fond-vert.mp4` | H.264 sur vert `#00B140` | La voie qui passe partout, CapCut Android compris — incruster avec l'outil « Chroma key » |
+
+`exports/carton-titre-NCAA-fond-vert.mp4` est la version déjà rendue de
+`1/ LA NCAA` en 1080×1920. Le `.mov` alpha n'est pas versionné (14 Mo) : la
+commande ci-dessus le régénère.
+
+Le rendu passe par le mode `?capture` de la page — fond réellement transparent,
+échelle 1:1 et `window.__seek(ms)` qui fige les animations à un instant précis.
+Les images sont donc exactes, quelle que soit la machine.
+
+**Capture d'écran**, si vous préférez : masquez l'interface (`H`) et filmez
+l'écran, ou passez le fond en vert pour incruster au montage. Le vert et le
+damier sont des outils de production, ils ne font pas partie de la charte et ne
+sont jamais diffusés.
 
 ## Socle réutilisable
 
