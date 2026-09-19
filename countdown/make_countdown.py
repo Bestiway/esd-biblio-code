@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Genere une animation de compte a rebours sur fond transparent.
 
-Sortie : .mov (QuickTime Animation ou ProRes 4444) et/ou .webm (VP9 alpha),
-les deux avec un vrai canal alpha, pretes a etre posees en surimpression
-dans CapCut, Premiere, DaVinci, Final Cut...
+Sortie : .mov (QuickTime Animation) et/ou .webm (VP9 alpha), les deux avec un
+vrai canal alpha, pretes a etre posees en surimpression dans CapCut, Premiere,
+DaVinci, Final Cut...
 
 Exemple :
     python3 make_countdown.py --start 100 --end 0 --duration 10 --size 1080x1920
@@ -79,11 +79,13 @@ def ease_out_cubic(t):
 # --------------------------------------------------------------------------- #
 # rendu
 # --------------------------------------------------------------------------- #
-def render_number(text, font, color, glow, shadow_offset, shadow_blur, shadow_alpha):
-    """Dessine un nombre blanc (ou colore) avec son ombre portee, sur transparent."""
+def render_number(text, font, color, glow, shadow_offset, shadow_blur, shadow_alpha,
+                  outline_width=0, outline_color=(0, 0, 0), outline_alpha=255):
+    """Dessine un nombre avec son contour et/ou son ombre portee, sur transparent."""
     probe = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
-    left, top, right, bottom = probe.textbbox((0, 0), text, font=font)
-    pad = shadow_blur * 4 + abs(shadow_offset) + 12
+    left, top, right, bottom = probe.textbbox((0, 0), text, font=font,
+                                              stroke_width=outline_width)
+    pad = shadow_blur * 4 + abs(shadow_offset) + outline_width + 12
     w = (right - left) + pad * 2
     h = (bottom - top) + pad * 2
     origin = (pad - left, pad - top)
@@ -92,21 +94,34 @@ def render_number(text, font, color, glow, shadow_offset, shadow_blur, shadow_al
     mask = Image.new("L", (w, h), 0)
     ImageDraw.Draw(mask).text(origin, text, font=font, fill=255)
 
+    # masque du texte epaissi : contour, et base de l'ombre s'il y en a un
+    if outline_width > 0:
+        outline_mask = Image.new("L", (w, h), 0)
+        ImageDraw.Draw(outline_mask).text(origin, text, font=font, fill=255,
+                                          stroke_width=outline_width, stroke_fill=255)
+    else:
+        outline_mask = mask
+
     layer = Image.new("RGBA", (w, h), (0, 0, 0, 0))
 
     if shadow_alpha > 0:
-        shadow_mask = mask.filter(ImageFilter.GaussianBlur(shadow_blur))
+        shadow_mask = outline_mask.filter(ImageFilter.GaussianBlur(shadow_blur))
         shadow_mask = shadow_mask.point(lambda v: int(v * shadow_alpha / 255))
         shadow = Image.new("RGBA", (w, h), (0, 0, 0, 0))
         shadow.putalpha(shadow_mask)
         layer.alpha_composite(shadow, (0, shadow_offset))
 
     if glow > 0:
-        glow_mask = mask.filter(ImageFilter.GaussianBlur(glow))
+        glow_mask = outline_mask.filter(ImageFilter.GaussianBlur(glow))
         glow_mask = glow_mask.point(lambda v: int(v * 0.55))
         halo = Image.new("RGBA", (w, h), color + (0,))
         halo.putalpha(glow_mask)
         layer.alpha_composite(halo)
+
+    if outline_width > 0:
+        stroke = Image.new("RGBA", (w, h), tuple(outline_color) + (0,))
+        stroke.putalpha(outline_mask.point(lambda v: v * outline_alpha // 255))
+        layer.alpha_composite(stroke)
 
     fill = Image.new("RGBA", (w, h), color + (0,))
     fill.putalpha(mask)
@@ -146,9 +161,14 @@ def build_frames(args, outdir):
     glow = int(font_size * 0.09) if args.glow else 0
 
     # un seul rendu par nombre, ensuite on ne fait que redimensionner
+    outline_width = (int(font_size * args.outline / 100)
+                     if args.outline > 0 else 0)
+    outline_color = hex_to_rgb(args.outline_color)
+
     cache = {
         v: render_number(
-            str(v), font, color, glow, shadow_offset, shadow_blur, args.shadow
+            str(v), font, color, glow, shadow_offset, shadow_blur, args.shadow,
+            outline_width, outline_color, args.outline_alpha
         )
         for v in set(values)
     }
@@ -164,9 +184,10 @@ def build_frames(args, outdir):
     # on garde le dernier nombre a l'ecran, sinon il ne dure qu'une poignee de frames
     frame_idx.extend([n_values - 1] * hold_frames)
     total_frames = len(frame_idx)
-    first_frame = {}
+    first_frame, run_length = {}, {}
     for i, idx in enumerate(frame_idx):
         first_frame.setdefault(idx, i)
+        run_length[idx] = run_length.get(idx, 0) + 1
 
     for i in range(total_frames):
         idx = frame_idx[i]
@@ -187,8 +208,11 @@ def build_frames(args, outdir):
             )
 
         # effet "pop" : le nombre grossit legerement a chaque changement
+        # un nombre qui ne dure que 2-3 images n'a pas le temps de "rebondir" :
+        # l'effet ne se voit pas, et il rend chaque image unique, ce qui fait
+        # exploser le poids des .mov sans perte (x5 mesure en QuickTime Animation)
         age = i - first_frame[idx]
-        if args.pop and age < pop_frames:
+        if args.pop and run_length[idx] >= pop_frames * 1.5 and age < pop_frames:
             k = ease_out_cubic(age / pop_frames)
             scale = 1 + args.pop_amount * (1 - k)
         else:
@@ -226,13 +250,14 @@ def encode(frames_dir, fps, size, out_path, fmt):
     base = [ff, "-y", "-hide_banner", "-loglevel", "error",
             "-framerate", str(fps), "-i", os.path.join(frames_dir, "f%05d.png")]
 
-    if fmt == "mov":                       # ProRes 4444 : alpha, la reference des montages
+    if fmt == "mov":                       # QuickTime Animation : alpha sans perte,
+        # le codec alpha le plus universellement lu (CapCut, Premiere, Resolve...)
+        cmd = base + ["-c:v", "qtrle", "-pix_fmt", "argb", out_path]
+    elif fmt == "prores":                  # ProRes 4444 : alpha, gros fichier
         cmd = base + ["-c:v", "prores_ks", "-profile:v", "4444",
                       "-pix_fmt", "yuva444p10le", "-alpha_bits", "16", out_path]
-    elif fmt == "qtrle":                   # QuickTime Animation : alpha sans perte, tres lourd
-        cmd = base + ["-c:v", "qtrle", "-pix_fmt", "argb", out_path]
-    elif fmt == "pngmov":                  # PNG dans un .mov : alpha sans perte, plus leger
-        # -pred mixed : le filtrage PNG fait gagner ~10 % sur des degrades d'alpha
+    elif fmt == "pngmov":                  # PNG dans un .mov : alpha sans perte, leger,
+        # mais beaucoup d'applications (dont CapCut) ne savent pas le decoder
         cmd = base + ["-c:v", "png", "-pix_fmt", "rgba", "-pred", "mixed", out_path]
     elif fmt == "webm":                    # VP9 alpha : leger
         cmd = base + ["-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p", "-b:v", "0",
@@ -269,8 +294,15 @@ def main():
     p.add_argument("--size", type=parse_size, default=(1080, 1920), help="ex. 1080x1920")
     p.add_argument("--font-size", type=int, default=0, help="0 = auto")
     p.add_argument("--color", default="#FFFFFF")
-    p.add_argument("--shadow", type=int, default=170,
-                   help="opacite de l'ombre portee 0-255 (0 = aucune)")
+    p.add_argument("--shadow", type=int, default=0,
+                   help="opacite de l'ombre portee 0-255 (0 = aucune). Attention : le"
+                        " degrade de l'ombre gonfle beaucoup les .mov sans perte")
+    p.add_argument("--outline", type=float, default=5.0,
+                   help="epaisseur du contour, en %% de la taille de police (0 = aucun)."
+                        " Alternative a l'ombre, bien plus legere a l'encodage")
+    p.add_argument("--outline-color", default="#000000")
+    p.add_argument("--outline-alpha", type=int, default=200,
+                   help="opacite du contour, 0-255")
     p.add_argument("--glow", action="store_true", help="halo colore autour du chiffre")
     p.add_argument("--ring", action="store_true", help="anneau de progression")
     p.add_argument("--ease", action="store_true",
@@ -290,7 +322,7 @@ def main():
 
     formats = [f.strip() for f in args.formats.split(",") if f.strip()]
     unknown = [f for f in formats
-               if f not in ("mov", "qtrle", "pngmov", "webm", "green", "preview")]
+               if f not in ("mov", "prores", "pngmov", "webm", "green", "preview")]
     if unknown:
         sys.exit("Format inconnu : %s" % ", ".join(unknown))
 
@@ -317,9 +349,10 @@ def main():
         build_frames(pass_args, tmp)
 
         for fmt in pass_formats:
-            ext = "mov" if fmt in ("mov", "qtrle", "pngmov") else (
+            ext = "mov" if fmt in ("mov", "prores", "pngmov") else (
                 "webm" if fmt == "webm" else "mp4")
-            suffix = {"green": "_fondvert", "preview": "_apercu"}.get(fmt, "")
+            suffix = {"green": "_fondvert", "preview": "_apercu",
+                      "prores": "_prores", "pngmov": "_png"}.get(fmt, "")
             out = "%s_%d-%d_%dx%d%s.%s" % (args.out, args.start, args.end,
                                            args.size[0], args.size[1], suffix, ext)
             print("Encodage %s..." % out)

@@ -12,7 +12,8 @@ python3 make_countdown.py
 ```
 
 Par défaut : 100 → 0 en 10 secondes puis 1 seconde sur le 0, 30 fps, 1080×1920,
-chiffre blanc avec ombre portée et petit rebond à chaque changement.
+chiffre blanc cerné d'un contour sombre, avec un rebond sur les nombres qui
+restent assez longtemps à l'écran pour qu'il se voie.
 
 ## Options utiles
 
@@ -25,7 +26,9 @@ chiffre blanc avec ombre portée et petit rebond à chaque changement.
 | `--size` | dimensions, ex. `1920x1080`, `1080x1080` |
 | `--color` | couleur du chiffre, ex. `--color "#FF3B30"` |
 | `--font-size` | taille en px (0 = automatique) |
-| `--shadow` | opacité de l'ombre portée, 0–255 (`--shadow 0` pour l'enlever) |
+| `--outline` | épaisseur du contour, en % de la taille de police (0 = aucun) |
+| `--outline-color` / `--outline-alpha` | couleur et opacité du contour |
+| `--shadow` | opacité d'une ombre portée floue, 0–255 (0 par défaut, voir ci-dessous) |
 | `--glow` | halo coloré autour du chiffre |
 | `--ring` | anneau de progression autour du nombre |
 | `--ease` | défile vite au début puis ralentit vers 0 |
@@ -37,15 +40,32 @@ chiffre blanc avec ombre portée et petit rebond à chaque changement.
 
 | Valeur | Fichier | Alpha | Usage |
 | --- | --- | --- | --- |
-| `mov` | ProRes 4444 `.mov` | oui | le format d'alpha le plus universel en montage ; gros fichier |
+| `mov` | QuickTime Animation `.mov` | oui | **le choix par défaut** : sans perte, et c'est le codec alpha que lisent le plus d'applications, CapCut compris |
 | `webm` | VP9 `.webm` | oui | très léger, lu par CapCut desktop et les navigateurs |
-| `pngmov` | PNG dans `.mov` | oui | sans perte, ~3× plus léger que ProRes (27 Mo contre 90 Mo en 1080×1920/11 s) |
-| `qtrle` | QuickTime Animation `.mov` | oui | sans perte, très lourd |
+| `prores` | ProRes 4444 `.mov` | oui | standard des suites de montage, mais ~3× plus lourd ici |
+| `pngmov` | PNG dans `.mov` | oui | léger, **mais beaucoup d'applications (dont CapCut) ne le décodent pas et affichent une image vide** |
 | `green` | `.mp4` fond vert | non | secours quand l'app ne gère pas l'alpha : incrustation chroma |
 | `preview` | `.mp4` fond gris | non | juste pour vérifier le rendu avant import |
 
-Le rendu `green` est fait dans une passe séparée, sans ombre portée : une ombre
-noire sur du vert laisse un halo que la clé chroma ne retire pas.
+Si l'option `--shadow` est utilisée, le rendu `green` est fait dans une passe
+séparée sans ombre : une ombre noire sur du vert laisse un halo que la clé
+chroma ne retire pas.
+
+## Pourquoi un contour plutôt qu'une ombre portée
+
+Les codecs `.mov` sans perte compressent par plages de pixels identiques. Un
+dégradé d'ombre rend presque chaque pixel unique, et un rebond appliqué à un
+nombre qui ne dure que 2–3 images rend presque chaque *image* unique. Mesuré
+sur le rendu 1080×1920 de 11 s, en QuickTime Animation :
+
+| Rendu | Poids |
+| --- | --- |
+| ombre portée + rebond partout | 117 Mo |
+| contour + rebond partout | 33 Mo |
+| contour, rebond seulement sur les nombres tenus | **7 Mo** |
+
+D'où les réglages par défaut. `--shadow 170` reste disponible si le poids n'est
+pas un problème.
 
 ## Exemples
 
