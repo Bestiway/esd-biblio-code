@@ -11,15 +11,16 @@ pip install pillow imageio-ffmpeg     # imageio-ffmpeg inutile si ffmpeg est dé
 python3 make_countdown.py
 ```
 
-Par défaut : 100 → 0, 10 secondes, 30 fps, 1080×1920, chiffre blanc avec ombre
-portée et petit rebond à chaque changement.
+Par défaut : 100 → 0 en 10 secondes puis 1 seconde sur le 0, 30 fps, 1080×1920,
+chiffre blanc avec ombre portée et petit rebond à chaque changement.
 
 ## Options utiles
 
 | Option | Effet |
 | --- | --- |
 | `--start` / `--end` | bornes du compte à rebours (`--start 60 --end 0`) |
-| `--duration` | durée totale en secondes |
+| `--duration` | durée du défilement en secondes (hors maintien final) |
+| `--hold` | secondes pendant lesquelles le dernier nombre reste affiché (1 s par défaut) |
 | `--fps` | images par seconde (30 par défaut) |
 | `--size` | dimensions, ex. `1920x1080`, `1080x1080` |
 | `--color` | couleur du chiffre, ex. `--color "#FF3B30"` |

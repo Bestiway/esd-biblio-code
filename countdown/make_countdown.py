@@ -138,7 +138,8 @@ def build_frames(args, outdir):
         range(args.start, args.end + 1)
     )
     n_values = len(values)
-    total_frames = max(1, round(args.duration * args.fps))
+    count_frames = max(1, round(args.duration * args.fps))
+    hold_frames = max(0, round(args.hold * args.fps))
 
     shadow_blur = max(1, int(font_size * 0.055))
     shadow_offset = int(font_size * 0.035)
@@ -156,10 +157,13 @@ def build_frames(args, outdir):
 
     # index du nombre affiche pour chaque frame, et frame ou ce nombre apparait
     frame_idx = []
-    for i in range(total_frames):
-        t = i / total_frames                      # 0 -> 1 sur toute l'anim
+    for i in range(count_frames):
+        t = i / count_frames                      # 0 -> 1 sur le defilement
         eased = ease_out_cubic(t) if args.ease else t
         frame_idx.append(min(n_values - 1, int(eased * n_values)))
+    # on garde le dernier nombre a l'ecran, sinon il ne dure qu'une poignee de frames
+    frame_idx.extend([n_values - 1] * hold_frames)
+    total_frames = len(frame_idx)
     first_frame = {}
     for i, idx in enumerate(frame_idx):
         first_frame.setdefault(idx, i)
@@ -256,7 +260,10 @@ def main():
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--start", type=int, default=100, help="nombre de depart (def. 100)")
     p.add_argument("--end", type=int, default=0, help="nombre d'arrivee (def. 0)")
-    p.add_argument("--duration", type=float, default=10.0, help="duree en secondes")
+    p.add_argument("--duration", type=float, default=10.0,
+                   help="duree du defilement en secondes (hors maintien final)")
+    p.add_argument("--hold", type=float, default=1.0,
+                   help="secondes pendant lesquelles le dernier nombre reste affiche")
     p.add_argument("--fps", type=int, default=30)
     p.add_argument("--size", type=parse_size, default=(1080, 1920), help="ex. 1080x1920")
     p.add_argument("--font-size", type=int, default=0, help="0 = auto")
@@ -304,8 +311,8 @@ def main():
             pass_args.shadow = 0
         tmp = tempfile.mkdtemp(prefix="countdown_")
         dirs[pass_name] = tmp
-        print("Rendu des images %s (%dx%d, %g s, %d fps)..."
-              % (pass_name, *args.size, args.duration, args.fps))
+        print("Rendu des images %s (%dx%d, %g s + %g s de maintien, %d fps)..."
+              % (pass_name, *args.size, args.duration, args.hold, args.fps))
         build_frames(pass_args, tmp)
 
         for fmt in pass_formats:
