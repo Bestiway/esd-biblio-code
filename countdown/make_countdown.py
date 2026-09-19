@@ -232,7 +232,8 @@ def encode(frames_dir, fps, size, out_path, fmt):
     elif fmt == "qtrle":                   # QuickTime Animation : alpha sans perte, tres lourd
         cmd = base + ["-c:v", "qtrle", "-pix_fmt", "argb", out_path]
     elif fmt == "pngmov":                  # PNG dans un .mov : alpha sans perte, plus leger
-        cmd = base + ["-c:v", "png", "-pix_fmt", "rgba", out_path]
+        # -pred mixed : le filtrage PNG fait gagner ~10 % sur des degrades d'alpha
+        cmd = base + ["-c:v", "png", "-pix_fmt", "rgba", "-pred", "mixed", out_path]
     elif fmt == "webm":                    # VP9 alpha : leger
         cmd = base + ["-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p", "-b:v", "0",
                       "-crf", "24", "-auto-alt-ref", "0", "-row-mt", "1", out_path]

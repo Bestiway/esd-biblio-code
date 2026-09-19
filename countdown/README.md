@@ -39,7 +39,7 @@ chiffre blanc avec ombre portée et petit rebond à chaque changement.
 | --- | --- | --- | --- |
 | `mov` | ProRes 4444 `.mov` | oui | le format d'alpha le plus universel en montage ; gros fichier |
 | `webm` | VP9 `.webm` | oui | très léger, lu par CapCut desktop et les navigateurs |
-| `pngmov` | PNG dans `.mov` | oui | sans perte, ~3× plus léger que ProRes |
+| `pngmov` | PNG dans `.mov` | oui | sans perte, ~3× plus léger que ProRes (27 Mo contre 90 Mo en 1080×1920/11 s) |
 | `qtrle` | QuickTime Animation `.mov` | oui | sans perte, très lourd |
 | `green` | `.mp4` fond vert | non | secours quand l'app ne gère pas l'alpha : incrustation chroma |
 | `preview` | `.mp4` fond gris | non | juste pour vérifier le rendu avant import |
