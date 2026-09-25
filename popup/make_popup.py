@@ -101,6 +101,10 @@ def main():
                    help="echelle de depart de l'apparition")
     p.add_argument("--formats", default="webm,black,white",
                    help="webm (alpha), mov (alpha, lourd), black, white, none")
+    p.add_argument("--keep-raw", action="store_true",
+                   help="garde le RGBA brut, pour reencoder sans tout recomposer")
+    p.add_argument("--mov-qscale", type=int, default=0,
+                   help="quantificateur ProRes (0 = defaut ; plus haut = plus leger)")
     args = p.parse_args()
 
     ff = ffmpeg_bin()
@@ -198,7 +202,8 @@ def main():
             cmd = ([ff, "-y", "-hide_banner", "-loglevel", "error"] + raw_in + audio_in
                    + maps + ["-c:v", "prores_ks", "-profile:v", "4444",
                              "-pix_fmt", "yuva444p10le", "-alpha_bits", "16"]
-                   + (["-c:a", "pcm_s16le"] if has_audio else []) + [out])
+                   + (["-qscale:v", str(args.mov_qscale)] if args.mov_qscale else [])
+                   + (["-c:a", "aac", "-b:a", "192k"] if has_audio else []) + [out])
         elif fmt in ("black", "white"):
             color = "black" if fmt == "black" else "white"
             out = "%s_fond_%s.mp4" % (args.out, "noir" if fmt == "black" else "blanc")
@@ -221,7 +226,10 @@ def main():
         subprocess.run(cmd, check=True)
         outputs.append(out)
 
-    os.remove(raw_path)
+    if args.keep_raw:
+        print("RGBA brut conserve : %s" % raw_path)
+    else:
+        os.remove(raw_path)
     for out in outputs:
         print("%s  (%.1f Mo)" % (out, os.path.getsize(out) / 1e6))
 

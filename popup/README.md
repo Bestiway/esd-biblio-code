@@ -28,20 +28,33 @@ de 15 px à coins de 42 px, apparition en 0,45 s avec un dépassement d'environ
 | `--overshoot` | ampleur du rebond (0 = zoom sans dépassement) |
 | `--start-scale` | échelle de départ (0 = part de rien) |
 | `--formats` | liste des sorties, séparées par des virgules |
+| `--mov-qscale` | quantificateur ProRes, 0 = défaut ; plus haut = plus léger |
+| `--keep-raw` | garde le RGBA brut, pour réencoder sans tout recomposer |
 
 ## Formats de sortie
 
 | Valeur | Fichier | Alpha | Usage |
 | --- | --- | --- | --- |
 | `webm` | VP9 `.webm` + Opus | oui | fond transparent, léger ; lu par CapCut desktop |
-| `mov` | ProRes 4444 `.mov` | oui | fond transparent, compatibilité maximale, **mais ~40 Mo par seconde en 1080p** |
+| `mov` | ProRes 4444 `.mov` | oui | fond transparent, compatibilité maximale (dont QuickTime et le Finder), **mais ~30 Mo par seconde en 1080p** ; voir `--mov-qscale` |
 | `black` | `.mp4` fond noir | non | clip autonome |
 | `white` | `.mp4` fond blanc | non | clip autonome |
 
 Pour un fond transparent avec une vidéo réelle, il n'y a pas de bon compromis :
 les codecs alpha sans perte (QuickTime Animation) sont inutilisables sur du
-contenu photographique, et ProRes 4444 est énorme. Le `webm` VP9 est le seul
-format alpha à la fois léger et de qualité correcte.
+contenu photographique, et ProRes 4444 est énorme. Mesuré sur un clip de 9,4 s :
+
+| Rendu | Poids |
+| --- | --- |
+| ProRes 4444, 1080p, qualité par défaut | 288 Mo |
+| ProRes 4444, 1080p, `--mov-qscale 28` | 40 Mo |
+| ProRes 4444, 720p, `--mov-qscale 24` | 27 Mo |
+| VP9 alpha, 1080p | 1,6 Mo |
+
+Le `webm` reste de loin le meilleur rapport qualité/poids, mais il ne se
+prévisualise pas sur macOS. Pour un `.mov` de taille raisonnable, composer
+directement en 720p donne un meilleur résultat que réduire un rendu 1080p :
+le cadre et les coins arrondis sont tracés à la résolution finale.
 
 ## Fonctionnement
 
