@@ -89,7 +89,9 @@ const alphaOut = path.join(outDir, `${nom}_ALPHA.mov`);
 await run(ffmpegPath, [
   '-y', ...input,
   '-c:v', 'prores_ks', '-profile:v', '4444', '-pix_fmt', 'yuva444p10le',
-  '-alpha_bits', '16', '-vendor', 'ap4h',
+  // qscale 6 : visuellement identique sur de l'aplat, moitié moins lourd que
+  // le réglage par défaut — ça compte pour un transfert vers le téléphone.
+  '-qscale:v', '6', '-alpha_bits', '8', '-vendor', 'ap4h',
   alphaOut,
 ]);
 
