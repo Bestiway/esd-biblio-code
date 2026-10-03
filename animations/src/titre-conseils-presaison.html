@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>College Access — 3 conseils présaison</title>
+<link rel="stylesheet" href="brand.css">
+<style>
+  /* Tailles propres à ce titre — le reste vient de brand.css */
+  .accent{ margin-bottom:44px; }
+  .l1, .l2{ font-size:88px; }
+  .l3{ font-size:124px; }
+  .rule{ width:300px; margin:50px 0 32px; }
+  .sub{ font-size:31px; }
+</style>
+</head>
+<body>
+  <div class="ca-stage ca-title-block" id="stage">
+    <div class="ca-accent accent" id="accent" aria-hidden="true"></div>
+
+    <h1 class="ca-legible">
+      <span class="ca-mask ca-light l1" id="l1"><span>3 CONSEILS POUR</span></span>
+      <span class="ca-mask ca-light l2" id="l2"><span>PRÉPARER SA</span></span>
+      <span class="ca-mask ca-black l3" id="l3"><span>PRÉSAISON</span></span>
+    </h1>
+
+    <div class="ca-rule rule" id="rule" aria-hidden="true"></div>
+
+    <p class="ca-legible">
+      <span class="ca-mask ca-sub sub" id="s1"><span>AUX USA</span></span>
+    </p>
+  </div>
+
+<script src="anim.js"></script>
+<script>
+  window.CA_DURATION = 5.2;
+
+  const $ = (id) => document.getElementById(id);
+
+  /* Cascade haut → bas, la ligne lourde « PRÉSAISON » arrive en dernier */
+  CA.drawLine($('accent'), { at: 0.00, dur: 0.70 });
+  CA.revealUp($('l1'),     { at: 0.16, dur: 0.95 });
+  CA.revealUp($('l2'),     { at: 0.29, dur: 0.95 });
+  CA.revealUp($('l3'),     { at: 0.44, dur: 0.95 });
+  CA.drawLine($('rule'),   { at: 0.74, dur: 0.70 });
+  CA.revealUp($('s1'),     { at: 0.86, dur: 0.85 });
+
+  CA.fadeOut($('stage'),   { at: 4.60, dur: 0.55 });
+</script>
+</body>
+</html>

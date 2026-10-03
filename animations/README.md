@@ -11,14 +11,22 @@ npm install
 node tools/render.mjs src/titre-trois-piliers.html --nom titre-trois-piliers
 ```
 
-Les fichiers sortent dans `out/` (dossier ignoré par git, les vidéos ne sont pas versionnées) :
+Animations existantes : `src/titre-trois-piliers.html`, `src/titre-conseils-presaison.html`.
 
-| Fichier | Quoi | Quand l'utiliser |
-|---|---|---|
-| `*_ALPHA.mov` | ProRes 4444, **fond transparent** | Incrustation directe par-dessus ta vidéo. Gros fichier (~50 Mo pour 5 s). |
-| `*_FOND-NOIR.mp4` | Texte sur fond noir | Secours universel : dans CapCut, incruste puis **Mélange → Écran**. Le noir devient transparent. ~120 Ko. |
-| `*_NAVY.mov` | Aplati sur navy `#001057` | Plan plein écran autonome (carton de titre). |
-| `*_apercu.mp4` | Aperçu 540×960 | Juste pour valider avant export. |
+Le livrable sort dans `out/` (dossier ignoré par git, les vidéos ne sont pas versionnées) :
+**`<nom>_ALPHA.mov`** — ProRes 4444, fond transparent, à incruster directement.
+
+La qualité d'encodage descend automatiquement d'un cran tant que le fichier
+dépasse 29 Mo (`--max-mo` pour changer la cible), sinon il devient pénible à
+transférer sur le téléphone. Sur de l'aplat, la perte est invisible.
+
+En ajoutant `--tout`, on obtient aussi trois variantes de secours :
+
+| Fichier | Quand l'utiliser |
+|---|---|
+| `*_FOND-NOIR.mp4` | Si un appareil avale mal le ProRes : incruster puis **Mélange → Écran**, le noir devient transparent. ~150 Ko. |
+| `*_NAVY.mov` | Plan plein écran autonome (carton de titre sur navy). |
+| `*_apercu.mp4` | Aperçu 540×960 pour valider sans importer. |
 
 ## Changer le texte
 

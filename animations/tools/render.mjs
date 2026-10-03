@@ -4,11 +4,10 @@
  *   node tools/render.mjs src/titre-trois-piliers.html --nom titre-trois-piliers
  *
  * Produit dans out/ :
- *   <nom>_ALPHA.mov       ProRes 4444, fond transparent → incrustation directe
- *   <nom>_FOND-NOIR.mp4   fond noir, à utiliser avec le mode de fusion « Écran »
- *                         de CapCut : solution de secours universelle et légère
- *   <nom>_NAVY.mov        aplati sur navy → plan plein écran autonome
- *   <nom>_apercu.mp4      aperçu léger pour validation
+ *   <nom>_ALPHA.mov    ProRes 4444, fond transparent → incrustation directe
+ *
+ * L'option --tout ajoute les variantes de secours : fond noir (pour le mode de
+ * fusion « Écran » de CapCut), version aplatie sur navy, et aperçu léger.
  *
  * Le navigateur rend chaque frame à un temps exact (CA.seek) : l'export est
  * reproductible, sans frame sautée, quelle que soit la machine.
@@ -17,7 +16,7 @@ import { chromium } from 'playwright-core';
 import ffmpegPath from 'ffmpeg-static';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { mkdir, rm } from 'node:fs/promises';
+import { mkdir, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
@@ -33,7 +32,7 @@ function arg(name, fallback) {
 
 const source = process.argv[2];
 if (!source) {
-  console.error('Usage : node tools/render.mjs <fichier.html> [--nom x] [--fps 30] [--w 1080] [--h 1920]');
+  console.error('Usage : node tools/render.mjs <fichier.html> [--nom x] [--fps 30] [--w 1080] [--h 1920] [--tout]');
   process.exit(1);
 }
 
@@ -47,6 +46,8 @@ const framesDir = path.join(ROOT, '.frames', nom);
 await rm(framesDir, { recursive: true, force: true });
 await mkdir(framesDir, { recursive: true });
 await mkdir(outDir, { recursive: true });
+
+/* ---- 1. Rendu des frames ------------------------------------------------- */
 
 const browser = await chromium.launch({
   executablePath: CHROME,
@@ -71,8 +72,7 @@ const total = Math.round(duration * fps);
 console.log(`→ ${nom} : ${width}×${height}, ${duration}s, ${total} frames à ${fps} fps`);
 
 for (let i = 0; i < total; i++) {
-  const t = i / fps;
-  await page.evaluate((time) => window.CA.seek(time), t);
+  await page.evaluate((time) => window.CA.seek(time), i / fps);
   await page.screenshot({
     path: path.join(framesDir, String(i).padStart(5, '0') + '.png'),
     omitBackground: true,            // conserve le canal alpha
@@ -84,55 +84,76 @@ console.log(`   ${total}/${total} frames rendues        `);
 
 const input = ['-framerate', String(fps), '-i', path.join(framesDir, '%05d.png')];
 
-/* 1. ProRes 4444 : le seul profil ProRes qui transporte l'alpha, et celui que lit CapCut */
+/* ---- 2. ProRes 4444, le livrable ----------------------------------------- */
+/* Seul profil ProRes qui transporte l'alpha, et celui que lit CapCut.
+   La qualité est dégradée d'un cran tant que le fichier dépasse la cible :
+   au-delà de ~30 Mo le transfert vers le téléphone devient pénible, et sur
+   des aplats de couleur la perte reste invisible. */
+
 const alphaOut = path.join(outDir, `${nom}_ALPHA.mov`);
-await run(ffmpegPath, [
-  '-y', ...input,
-  '-c:v', 'prores_ks', '-profile:v', '4444', '-pix_fmt', 'yuva444p10le',
-  // qscale 6 : visuellement identique sur de l'aplat, moitié moins lourd que
-  // le réglage par défaut — ça compte pour un transfert vers le téléphone.
-  '-qscale:v', '6', '-alpha_bits', '8', '-vendor', 'ap4h',
-  alphaOut,
-]);
+const maxBytes = Number(arg('max-mo', 29)) * 1024 * 1024;
+let taille = 0;
 
-/* 2. Fond noir : dans CapCut, mode de fusion « Écran » rend le noir transparent.
-      Fichier minuscule et lisible par n'importe quel téléphone, contrairement au ProRes. */
-const screenOut = path.join(outDir, `${nom}_FOND-NOIR.mp4`);
-await run(ffmpegPath, [
-  '-y',
-  '-f', 'lavfi', '-i', `color=c=black:s=${width}x${height}:r=${fps}:d=${duration}`,
-  ...input,
-  '-filter_complex', '[0:v][1:v]overlay=shortest=1,format=yuv420p[v]',
-  '-map', '[v]', '-c:v', 'libx264', '-preset', 'slow', '-crf', '16',
-  '-movflags', '+faststart',
-  screenOut,
-]);
+for (const q of [6, 9, 13, 18]) {
+  await run(ffmpegPath, [
+    '-y', ...input,
+    '-c:v', 'prores_ks', '-profile:v', '4444', '-pix_fmt', 'yuva444p10le',
+    '-qscale:v', String(q), '-alpha_bits', '8', '-vendor', 'ap4h',
+    alphaOut,
+  ]);
+  taille = (await stat(alphaOut)).size;
+  console.log(`   ProRes qscale ${q} → ${(taille / 1048576).toFixed(1)} Mo`);
+  if (taille <= maxBytes) break;
+}
+if (taille > maxBytes) {
+  console.warn(`   ! ${(taille / 1048576).toFixed(1)} Mo : au-dessus de la cible, raccourcis le plan ou baisse le fps`);
+}
 
-/* 3. Version aplatie sur navy, pour un plan plein écran autonome */
-const navyOut = path.join(outDir, `${nom}_NAVY.mov`);
-await run(ffmpegPath, [
-  '-y',
-  '-f', 'lavfi', '-i', `color=c=0x001057:s=${width}x${height}:r=${fps}:d=${duration}`,
-  ...input,
-  '-filter_complex', '[0:v][1:v]overlay=shortest=1,format=yuv420p[v]',
-  '-map', '[v]', '-c:v', 'libx264', '-preset', 'slow', '-crf', '17',
-  '-movflags', '+faststart',
-  navyOut,
-]);
+/* ---- 3. Variantes de secours, uniquement avec --tout --------------------- */
 
-/* 4. Aperçu léger (damier gris pour voir ce qui est transparent) */
-const previewOut = path.join(outDir, `${nom}_apercu.mp4`);
-await run(ffmpegPath, [
-  '-y',
-  '-f', 'lavfi', '-i', `color=c=0x1A1D26:s=${width}x${height}:r=${fps}:d=${duration}`,
-  ...input,
-  '-filter_complex', '[0:v][1:v]overlay=shortest=1,scale=540:960,format=yuv420p[v]',
-  '-map', '[v]', '-c:v', 'libx264', '-preset', 'medium', '-crf', '26',
-  '-movflags', '+faststart',
-  previewOut,
-]);
+const extras = [];
+if (process.argv.includes('--tout')) {
+  /* Fond noir : dans CapCut, le mode de fusion « Écran » rend le noir transparent.
+     Fichier minuscule, lisible par n'importe quel téléphone. */
+  const screenOut = path.join(outDir, `${nom}_FOND-NOIR.mp4`);
+  await run(ffmpegPath, [
+    '-y',
+    '-f', 'lavfi', '-i', `color=c=black:s=${width}x${height}:r=${fps}:d=${duration}`,
+    ...input,
+    '-filter_complex', '[0:v][1:v]overlay=shortest=1,format=yuv420p[v]',
+    '-map', '[v]', '-c:v', 'libx264', '-preset', 'slow', '-crf', '16',
+    '-movflags', '+faststart',
+    screenOut,
+  ]);
+
+  /* Aplati sur navy : carton de titre plein écran autonome */
+  const navyOut = path.join(outDir, `${nom}_NAVY.mov`);
+  await run(ffmpegPath, [
+    '-y',
+    '-f', 'lavfi', '-i', `color=c=0x001057:s=${width}x${height}:r=${fps}:d=${duration}`,
+    ...input,
+    '-filter_complex', '[0:v][1:v]overlay=shortest=1,format=yuv420p[v]',
+    '-map', '[v]', '-c:v', 'libx264', '-preset', 'slow', '-crf', '17',
+    '-movflags', '+faststart',
+    navyOut,
+  ]);
+
+  /* Aperçu léger, fond gris foncé pour visualiser la zone transparente */
+  const previewOut = path.join(outDir, `${nom}_apercu.mp4`);
+  await run(ffmpegPath, [
+    '-y',
+    '-f', 'lavfi', '-i', `color=c=0x1A1D26:s=${width}x${height}:r=${fps}:d=${duration}`,
+    ...input,
+    '-filter_complex', '[0:v][1:v]overlay=shortest=1,scale=540:960,format=yuv420p[v]',
+    '-map', '[v]', '-c:v', 'libx264', '-preset', 'medium', '-crf', '26',
+    '-movflags', '+faststart',
+    previewOut,
+  ]);
+
+  extras.push(screenOut, navyOut, previewOut);
+}
 
 await rm(framesDir, { recursive: true, force: true });
-for (const f of [alphaOut, screenOut, navyOut, previewOut]) {
+for (const f of [alphaOut, ...extras]) {
   console.log(`✓ ${path.relative(ROOT, f)}`);
 }
