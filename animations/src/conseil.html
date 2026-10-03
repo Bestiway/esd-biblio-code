@@ -9,7 +9,7 @@
      conseil.html?n=1&titre=LE%20CARDIO                                     */
   .accent{ margin-bottom:40px; }
   .over{ font-size:34px; color:var(--ca-red); }
-  .titre{ font-size:150px; white-space:nowrap; }
+  .titre{ font-size:132px; }
   .rule{ width:260px; margin-top:46px; }
 </style>
 </head>
@@ -36,13 +36,15 @@
   if (p.get('n')) $('over-txt').textContent = `CONSEIL N°${p.get('n')}`;
   if (p.get('titre')) $('titre-txt').textContent = p.get('titre');
 
-  /* Le titre doit tenir sur une ligne quel que soit le mot : on réduit le
-     corps jusqu'à ce qu'il rentre dans la colonne de texte (safe zone 96 px). */
+  /* Le titre passe à la ligne tout seul ; on ne réduit le corps que si un mot
+     est à lui seul trop large pour la colonne (safe zone de 96 px).
+     On mesure scrollWidth : getBoundingClientRect() renverrait la largeur du
+     bloc, qui vaut toujours celle de la colonne, et ne déborderait jamais. */
   const colonne = $('stage').clientWidth - 96 * 2;
   const titre = $('titre');
-  for (let taille = 150; taille >= 70; taille -= 2) {
+  for (let taille = 132; taille >= 88; taille -= 2) {
     titre.style.fontSize = taille + 'px';
-    if ($('titre-txt').getBoundingClientRect().width <= colonne) break;
+    if ($('titre-txt').scrollWidth <= colonne) break;
   }
 
   window.CA_DURATION = 4.2;
