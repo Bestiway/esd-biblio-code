@@ -1,0 +1,13 @@
+{
+  "name": "college-access-animations",
+  "private": true,
+  "type": "module",
+  "description": "Animations texte College Access exportées en .mov (alpha) pour CapCut",
+  "scripts": {
+    "titre": "node tools/render.mjs src/titre-trois-piliers.html --nom titre-trois-piliers"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.2.0",
+    "playwright-core": "^1.56.0"
+  }
+}
