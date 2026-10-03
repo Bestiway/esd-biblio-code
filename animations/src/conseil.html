@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>College Access — Carte conseil</title>
+<link rel="stylesheet" href="brand.css">
+<style>
+  /* Carte de point numéroté. Le texte vient de l'URL :
+     conseil.html?n=1&titre=LE%20CARDIO                                     */
+  .accent{ margin-bottom:40px; }
+  .over{ font-size:34px; color:var(--ca-red); }
+  .titre{ font-size:150px; white-space:nowrap; }
+  .rule{ width:260px; margin-top:46px; }
+</style>
+</head>
+<body>
+  <div class="ca-stage ca-title-block" id="stage">
+    <div class="ca-accent accent" id="accent" aria-hidden="true"></div>
+
+    <p class="ca-legible">
+      <span class="ca-mask ca-sub over" id="over"><span id="over-txt">CONSEIL N°1</span></span>
+    </p>
+
+    <h1 class="ca-legible">
+      <span class="ca-mask ca-black titre" id="titre"><span id="titre-txt">LE CARDIO</span></span>
+    </h1>
+
+    <div class="ca-rule rule" id="rule" aria-hidden="true"></div>
+  </div>
+
+<script src="anim.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const p = new URLSearchParams(location.search);
+
+  if (p.get('n')) $('over-txt').textContent = `CONSEIL N°${p.get('n')}`;
+  if (p.get('titre')) $('titre-txt').textContent = p.get('titre');
+
+  /* Le titre doit tenir sur une ligne quel que soit le mot : on réduit le
+     corps jusqu'à ce qu'il rentre dans la colonne de texte (safe zone 96 px). */
+  const colonne = $('stage').clientWidth - 96 * 2;
+  const titre = $('titre');
+  for (let taille = 150; taille >= 70; taille -= 2) {
+    titre.style.fontSize = taille + 'px';
+    if ($('titre-txt').getBoundingClientRect().width <= colonne) break;
+  }
+
+  window.CA_DURATION = 4.2;
+
+  CA.drawLine($('accent'), { at: 0.00, dur: 0.70 });
+  CA.revealUp($('over'),   { at: 0.14, dur: 0.85 });
+  CA.revealUp($('titre'),  { at: 0.30, dur: 0.95 });
+  CA.drawLine($('rule'),   { at: 0.62, dur: 0.70 });
+
+  CA.fadeOut($('stage'),   { at: 3.60, dur: 0.55 });
+</script>
+</body>
+</html>

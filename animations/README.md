@@ -11,7 +11,19 @@ npm install
 node tools/render.mjs src/titre-trois-piliers.html --nom titre-trois-piliers
 ```
 
-Animations existantes : `src/titre-trois-piliers.html`, `src/titre-conseils-presaison.html`.
+Animations existantes :
+
+- `src/titre-trois-piliers.html` — carton de titre
+- `src/titre-conseils-presaison.html` — carton de titre
+- `src/conseil.html` — **gabarit paramétrable** de carte de point numéroté :
+
+```bash
+node tools/render.mjs src/conseil.html --nom conseil-2-anglais \
+  --params "n=2&titre=L'ANGLAIS"
+```
+
+Le corps du titre se réduit tout seul jusqu'à tenir dans la safe zone, quel
+que soit le mot.
 
 Le livrable sort dans `out/` (dossier ignoré par git, les vidéos ne sont pas versionnées) :
 **`<nom>_ALPHA.mov`** — ProRes 4444, fond transparent, à incruster directement.

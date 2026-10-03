@@ -32,7 +32,7 @@ function arg(name, fallback) {
 
 const source = process.argv[2];
 if (!source) {
-  console.error('Usage : node tools/render.mjs <fichier.html> [--nom x] [--fps 30] [--w 1080] [--h 1920] [--tout]');
+  console.error('Usage : node tools/render.mjs <fichier.html> [--nom x] [--fps 30] [--w 1080] [--h 1920] [--params "n=1&titre=..."] [--tout]');
   process.exit(1);
 }
 
@@ -64,7 +64,10 @@ const page = await browser.newPage({
   deviceScaleFactor: 1,
 });
 
-await page.goto(pathToFileURL(path.resolve(source)).href, { waitUntil: 'load' });
+/* --params "n=1&titre=LE%20CARDIO" alimente les gabarits paramétrables */
+const params = arg('params', '');
+const url = pathToFileURL(path.resolve(source)).href + (params ? `?${params}` : '');
+await page.goto(url, { waitUntil: 'load' });
 await page.evaluate(() => document.fonts.ready);
 
 const duration = await page.evaluate(() => window.CA_DURATION ?? 5);
