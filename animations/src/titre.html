@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>College Access — Carton de titre</title>
+<link rel="stylesheet" href="brand.css">
+<style>
+  /* Carton de titre générique. Le texte vient de l'URL, « | » sépare les lignes :
+     titre.html?light=ET%20VOIL%C3%80%20LE&black=R%C3%89SULTAT&sub=AUX%20USA   */
+  .accent{ margin-bottom:44px; }
+  .light{ font-size:100px; }
+  .black{ font-size:132px; }
+  .rule{ width:300px; margin:48px 0 32px; }
+  .sub{ font-size:31px; }
+</style>
+</head>
+<body>
+  <div class="ca-stage ca-title-block" id="stage">
+    <div class="ca-accent accent" id="accent" aria-hidden="true"></div>
+    <h1 class="ca-legible" id="titre"></h1>
+    <div class="ca-rule rule" id="rule" aria-hidden="true" hidden></div>
+    <p class="ca-legible" id="qualif"></p>
+  </div>
+
+<script src="anim.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const p = new URLSearchParams(location.search);
+
+  const lignes = (cle) => (p.get(cle) || '').split('|').map((t) => t.trim()).filter(Boolean);
+
+  /* Une ligne = un masque, pour que chacune soit révélée séparément */
+  function ajouter(parent, texte, classes) {
+    const masque = document.createElement('span');
+    masque.className = `ca-mask ${classes}`;
+    const inner = document.createElement('span');
+    inner.textContent = texte;
+    masque.append(inner);
+    parent.append(masque);
+    return masque;
+  }
+
+  const masques = [];
+  for (const t of lignes('light').length ? lignes('light') : ['ET VOILÀ LE']) {
+    masques.push(ajouter($('titre'), t, 'ca-light light'));
+  }
+  for (const t of lignes('black').length ? lignes('black') : ['RÉSULTAT']) {
+    masques.push(ajouter($('titre'), t, 'ca-black black'));
+  }
+
+  const qualif = lignes('sub');
+  if (qualif.length) {
+    $('rule').hidden = false;
+    for (const t of qualif) masques.push(ajouter($('qualif'), t, 'ca-sub sub'));
+  }
+
+  /* Chaque ligne se réduit si un mot déborde de la safe zone */
+  const colonne = $('stage').clientWidth - 96 * 2;
+  for (const m of masques) {
+    const depart = parseFloat(getComputedStyle(m).fontSize);
+    for (let taille = depart; taille >= depart * 0.6; taille -= 2) {
+      m.style.fontSize = taille + 'px';
+      if (m.firstElementChild.scrollWidth <= colonne) break;
+    }
+  }
+
+  /* Cascade haut → bas, 0,13 s entre chaque ligne */
+  CA.drawLine($('accent'), { at: 0, dur: 0.70 });
+  masques.forEach((m, i) => CA.revealUp(m, { at: 0.16 + i * 0.13, dur: 0.95 }));
+  if (qualif.length) {
+    CA.drawLine($('rule'), { at: 0.16 + (masques.length - qualif.length) * 0.13, dur: 0.70 });
+  }
+
+  const fin = Number(p.get('duree') || 4.2);
+  window.CA_DURATION = fin;
+  CA.fadeOut($('stage'), { at: fin - 0.6, dur: 0.55 });
+</script>
+</body>
+</html>

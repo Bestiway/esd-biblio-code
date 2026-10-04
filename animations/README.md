@@ -13,8 +13,19 @@ node tools/render.mjs src/titre-trois-piliers.html --nom titre-trois-piliers
 
 Animations existantes :
 
-- `src/titre-trois-piliers.html` — carton de titre
-- `src/titre-conseils-presaison.html` — carton de titre
+- `src/titre.html` — **gabarit paramétrable** de carton de titre. « | » sépare
+  les lignes, `sub` ajoute le filet rouge et le qualificatif en small caps :
+
+```bash
+node tools/render.mjs src/titre.html --nom et-voila-le-resultat \
+  --params "light=ET VOILÀ LE&black=RÉSULTAT"
+
+node tools/render.mjs src/titre.html --nom titre-presaison \
+  --params "light=3 CONSEILS POUR|PRÉPARER SA&black=PRÉSAISON&sub=AUX USA&duree=5.2"
+```
+
+- `src/titre-trois-piliers.html`, `src/titre-conseils-presaison.html` — les deux
+  premiers titres, écrits avant le gabarit
 - `src/conseil.html` — **gabarit paramétrable** de carte de point numéroté :
 
 ```bash
