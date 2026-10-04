@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>College Access — Localisation</title>
+<link rel="stylesheet" href="brand.css">
+<style>
+  /* Carte de localisation. Le texte vient de l'URL :
+     lieu.html?lieu=BRASSAC&sous=FRANCE                                     */
+  .ligne{ display:flex; align-items:center; gap:28px; }
+  .pin{ width:88px; height:88px; flex:none; color:var(--ca-red); }
+  .pin svg{ width:100%; height:100%; display:block;
+            filter:drop-shadow(0 2px 10px rgba(10,13,23,.38)); }
+  .lieu{ font-size:132px; }
+  .rule{ width:240px; margin-top:40px; }
+  .sous{ font-size:31px; margin-top:30px; }
+</style>
+</head>
+<body>
+  <div class="ca-stage ca-title-block" id="stage">
+    <div class="ligne">
+      <span class="pin" id="pin" aria-hidden="true">
+        <!-- Repère de carte, tracé vectoriel : jamais d'emoji dans les visuels -->
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+          <circle cx="12" cy="10" r="3"/>
+        </svg>
+      </span>
+      <h1 class="ca-legible">
+        <span class="ca-mask ca-black lieu" id="lieu"><span id="lieu-txt">BRASSAC</span></span>
+      </h1>
+    </div>
+
+    <div class="ca-rule rule" id="rule" aria-hidden="true"></div>
+    <p class="ca-legible" id="sous-wrap" hidden>
+      <span class="ca-mask ca-sub sous" id="sous"><span id="sous-txt"></span></span>
+    </p>
+  </div>
+
+<script src="anim.js"></script>
+<script>
+  const $ = (id) => document.getElementById(id);
+  const p = new URLSearchParams(location.search);
+
+  if (p.get('lieu')) $('lieu-txt').textContent = p.get('lieu');
+  if (p.get('sous')) {
+    $('sous-txt').textContent = p.get('sous');
+    $('sous-wrap').hidden = false;
+  }
+
+  /* L'icône occupe sa place dans la colonne : le nom dispose du reste */
+  const colonne = $('stage').clientWidth - 96 * 2 - 88 - 28;
+  for (let taille = 132; taille >= 72; taille -= 2) {
+    $('lieu').style.fontSize = taille + 'px';
+    if ($('lieu-txt').scrollWidth <= colonne) break;
+  }
+
+  window.CA_DURATION = 4.2;
+
+  /* Le repère tombe et s'installe — rebond court, pas caricatural */
+  CA.animate($('pin'), [
+    { transform: 'translateY(-70px) scale(.7)', opacity: 0 },
+    { transform: 'translateY(0) scale(1)', opacity: 1 },
+  ], { at: 0.05, dur: 0.75, easing: 'cubic-bezier(0.34, 1.4, 0.64, 1)' });
+
+  CA.revealUp($('lieu'), { at: 0.34, dur: 0.95 });
+  CA.drawLine($('rule'), { at: 0.66, dur: 0.70 });
+  if (p.get('sous')) CA.revealUp($('sous'), { at: 0.78, dur: 0.85 });
+
+  CA.fadeOut($('stage'), { at: 3.60, dur: 0.55 });
+</script>
+</body>
+</html>

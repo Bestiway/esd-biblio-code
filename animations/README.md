@@ -44,6 +44,13 @@ node tools/render.mjs src/conseil.html --nom etape-1-carrelage \
 Le titre passe à la ligne, et son corps ne se réduit que si un mot seul est
 trop large pour la safe zone.
 
+- `src/lieu.html` — **gabarit paramétrable** de localisation, repère de carte
+  en SVG tracé (`sous` ajoute une ligne sous le nom) :
+
+```bash
+node tools/render.mjs src/lieu.html --nom lieu-brassac --params "lieu=BRASSAC"
+```
+
 - `src/heure.html` — **gabarit paramétrable** d'horodatage, le chiffre en
   « data hero number » de la charte :
 
