@@ -22,8 +22,16 @@ node tools/render.mjs src/conseil.html --nom conseil-2-anglais \
   --params "n=2&titre=L'ANGLAIS"
 ```
 
-Le corps du titre se réduit tout seul jusqu'à tenir dans la safe zone, quel
-que soit le mot.
+Le surtitre accepte aussi un libellé libre, pour les cartes qui ne sont pas
+des conseils :
+
+```bash
+node tools/render.mjs src/conseil.html --nom etape-1-carrelage \
+  --params "over=ÉTAPE 1&titre=RAYER LE CARRELAGE"
+```
+
+Le titre passe à la ligne, et son corps ne se réduit que si un mot seul est
+trop large pour la safe zone.
 
 - `src/heure.html` — **gabarit paramétrable** d'horodatage, le chiffre en
   « data hero number » de la charte :

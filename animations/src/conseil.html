@@ -6,7 +6,8 @@
 <link rel="stylesheet" href="brand.css">
 <style>
   /* Carte de point numéroté. Le texte vient de l'URL :
-     conseil.html?n=1&titre=LE%20CARDIO                                     */
+     conseil.html?n=1&titre=LE%20CARDIO            → surtitre « CONSEIL N°1 »
+     conseil.html?over=ÉTAPE%201&titre=...         → surtitre libre          */
   .accent{ margin-bottom:40px; }
   .over{ font-size:34px; color:var(--ca-red); }
   .titre{ font-size:132px; }
@@ -33,7 +34,10 @@
   const $ = (id) => document.getElementById(id);
   const p = new URLSearchParams(location.search);
 
-  if (p.get('n')) $('over-txt').textContent = `CONSEIL N°${p.get('n')}`;
+  /* `over` impose le surtitre tel quel (ÉTAPE 1, SAISON 2026…), `n` garde le
+     raccourci « CONSEIL N°x ». */
+  if (p.get('over')) $('over-txt').textContent = p.get('over');
+  else if (p.get('n')) $('over-txt').textContent = `CONSEIL N°${p.get('n')}`;
   if (p.get('titre')) $('titre-txt').textContent = p.get('titre');
 
   /* Le titre passe à la ligne tout seul ; on ne réduit le corps que si un mot
