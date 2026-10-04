@@ -25,6 +25,14 @@ node tools/render.mjs src/conseil.html --nom conseil-2-anglais \
 Le corps du titre se réduit tout seul jusqu'à tenir dans la safe zone, quel
 que soit le mot.
 
+- `src/heure.html` — **gabarit paramétrable** d'horodatage, le chiffre en
+  « data hero number » de la charte :
+
+```bash
+node tools/render.mjs src/heure.html --nom heure-8h-matin \
+  --params "over=IL EST&heure=8H&moment=DU MATIN"
+```
+
 Le livrable sort dans `out/` (dossier ignoré par git, les vidéos ne sont pas versionnées) :
 **`<nom>_ALPHA.mov`** — ProRes 4444, fond transparent, à incruster directement.
 
